@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { hasSupabaseEnv } from "@/lib/supabase/env";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,11 +19,15 @@ import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
+  const supabaseConfigured = hasSupabaseEnv();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function signIn() {
+    if (!supabaseConfigured) {
+      return toast.error("Configure Supabase env vars first.");
+    }
     setLoading(true);
     const { error } = await createClient().auth.signInWithPassword({ email, password });
     setLoading(false);
@@ -32,6 +37,9 @@ export default function LoginPage() {
   }
 
   async function signUp() {
+    if (!supabaseConfigured) {
+      return toast.error("Configure Supabase env vars first.");
+    }
     setLoading(true);
     const { error } = await createClient().auth.signUp({ email, password });
     setLoading(false);
@@ -40,6 +48,9 @@ export default function LoginPage() {
   }
 
   async function signInWithGoogle() {
+    if (!supabaseConfigured) {
+      return toast.error("Configure Supabase env vars first.");
+    }
     const { error } = await createClient().auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -55,6 +66,12 @@ export default function LoginPage() {
           <CardDescription>Sign in to your journal</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {!supabaseConfigured && (
+            <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+              Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to
+              .env.local, then restart the dev server.
+            </div>
+          )}
           <Tabs defaultValue="signin">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="signin">Sign in</TabsTrigger>
@@ -85,7 +102,7 @@ export default function LoginPage() {
                 </div>
                 <Button
                   className="w-full"
-                  disabled={loading || !email || !password}
+                  disabled={!supabaseConfigured || loading || !email || !password}
                   onClick={tab === "signin" ? signIn : signUp}
                 >
                   {tab === "signin" ? "Sign in" : "Create account"}
@@ -101,7 +118,12 @@ export default function LoginPage() {
               <span className="bg-card px-2 text-muted-foreground">or</span>
             </div>
           </div>
-          <Button variant="outline" className="w-full" onClick={signInWithGoogle}>
+          <Button
+            variant="outline"
+            className="w-full"
+            disabled={!supabaseConfigured}
+            onClick={signInWithGoogle}
+          >
             Continue with Google
           </Button>
         </CardContent>
