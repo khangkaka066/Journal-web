@@ -87,6 +87,8 @@ create table public.trades (
   emotion_after text,
   mistakes text,
   lessons text,
+  mistake_tags text[] not null default '{}',
+  rule_breaks text[] not null default '{}',
   trade_checklist jsonb not null default '{}'::jsonb,
   tags text[] not null default '{}',
   screenshot_urls text[] not null default '{}',

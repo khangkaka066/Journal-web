@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Save, Send, WalletCards } from "lucide-react";
+import { ChevronDown, FileImage, Save, Send, ShieldAlert, WalletCards } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { computePnl, computeRMultiple } from "@/lib/pnl";
 import { deriveSession } from "@/lib/sessions";
@@ -81,6 +81,30 @@ const EMPTY_CHECKLIST: Required<TradeChecklist> = {
   review: [],
 };
 
+const MISTAKE_TAGS = [
+  "Chased entry",
+  "Late entry",
+  "No HTF PDA",
+  "Ignored news",
+  "Moved stop",
+  "Early exit",
+  "Oversized",
+  "Revenge trade",
+  "No liquidity target",
+  "Entered in chop",
+];
+
+const RULE_BREAKS = [
+  "No checklist",
+  "No invalidation",
+  "No 2R available",
+  "Outside killzone",
+  "Against HTF bias",
+  "No displacement",
+  "Entered before confirmation",
+  "Held past plan",
+];
+
 function normalizeChecklist(checklist?: TradeChecklist | null): Required<TradeChecklist> {
   return {
     entryModels: checklist?.entryModels ?? [],
@@ -136,11 +160,17 @@ export function TradeForm({
   const [emotionBefore, setEmotionBefore] = useState(trade?.emotion_before ?? "");
   const [emotionAfter, setEmotionAfter] = useState(trade?.emotion_after ?? "");
   const [mistakes, setMistakes] = useState(trade?.mistakes ?? "");
+  const [mistakeTags, setMistakeTags] = useState<string[]>(trade?.mistake_tags ?? []);
+  const [ruleBreaks, setRuleBreaks] = useState<string[]>(trade?.rule_breaks ?? []);
   const [lessons, setLessons] = useState(trade?.lessons ?? "");
   const [tradeChecklist, setTradeChecklist] = useState<Required<TradeChecklist>>(
     normalizeChecklist(trade?.trade_checklist)
   );
   const [tags, setTags] = useState(trade?.tags?.join(", ") ?? "");
+  const [screenshotUrls, setScreenshotUrls] = useState<string[]>(
+    trade?.screenshot_urls ?? []
+  );
+  const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [notes, setNotes] = useState(trade?.notes ?? "");
   const [saving, setSaving] = useState(false);
 
@@ -201,6 +231,39 @@ export function TradeForm({
     });
   }
 
+  function toggleString(list: string[], item: string, setList: (value: string[]) => void) {
+    setList(list.includes(item) ? list.filter((value) => value !== item) : [...list, item]);
+  }
+
+  async function uploadScreenshots(): Promise<string[] | null> {
+    if (screenshotFiles.length === 0) return [];
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) {
+      toast.error("Sign in again before uploading screenshots");
+      return null;
+    }
+
+    const uploaded: string[] = [];
+    for (const file of screenshotFiles) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+      const path = `${user.id}/${crypto.randomUUID()}-${safeName}`;
+      const { error } = await supabase.storage.from("screenshots").upload(path, file);
+
+      if (error) {
+        toast.error(error.message);
+        return null;
+      }
+
+      uploaded.push(path);
+    }
+
+    return uploaded;
+  }
+
   async function save(addAnother: boolean) {
     if (!instrumentId || !entryPrice || !exitPrice || !quantity || !entryTime) {
       return toast.error("Fill in the required fields");
@@ -208,6 +271,13 @@ export function TradeForm({
     if (pnl == null || isNaN(pnl)) return toast.error("PnL could not be computed");
 
     setSaving(true);
+    const uploadedScreenshots = await uploadScreenshots();
+    if (uploadedScreenshots == null) {
+      setSaving(false);
+      return;
+    }
+
+    const nextScreenshotUrls = [...screenshotUrls, ...uploadedScreenshots];
     const payload = {
       instrument_id: instrumentId,
       direction,
@@ -228,9 +298,12 @@ export function TradeForm({
       emotion_before: emotionBefore || null,
       emotion_after: emotionAfter || null,
       mistakes: mistakes || null,
+      mistake_tags: mistakeTags,
+      rule_breaks: ruleBreaks,
       lessons: lessons || null,
       trade_checklist: tradeChecklist,
       tags: tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+      screenshot_urls: nextScreenshotUrls,
       notes: notes || null,
     };
 
@@ -255,6 +328,10 @@ export function TradeForm({
       setPnlOverride("");
       setRisk("");
       setTradeChecklist(EMPTY_CHECKLIST);
+      setMistakeTags([]);
+      setRuleBreaks([]);
+      setScreenshotUrls([]);
+      setScreenshotFiles([]);
       setNotes("");
       router.refresh();
     } else {
@@ -490,6 +567,56 @@ export function TradeForm({
               <Input value={emotionAfter} onChange={(e) => setEmotionAfter(e.target.value)} />
             </div>
           </div>
+          <ReviewChips
+            icon={<ShieldAlert className="size-4 text-primary" />}
+            title="Mistake tags"
+            description="Structured tags make mistake stats reliable."
+            items={MISTAKE_TAGS}
+            selected={mistakeTags}
+            onToggle={(item) => toggleString(mistakeTags, item, setMistakeTags)}
+          />
+          <ReviewChips
+            icon={<ShieldAlert className="size-4 text-destructive" />}
+            title="Rule breaks"
+            description="Mark broken rules to measure their real cost."
+            items={RULE_BREAKS}
+            selected={ruleBreaks}
+            onToggle={(item) => toggleString(ruleBreaks, item, setRuleBreaks)}
+          />
+          <div className="rounded-lg border bg-background/50 p-4">
+            <div className="flex items-center gap-2">
+              <FileImage className="size-4 text-primary" />
+              <div>
+                <h3 className="font-medium">Screenshots</h3>
+                <p className="text-sm text-muted-foreground">
+                  Upload chart images to preserve the exact market context.
+                </p>
+              </div>
+            </div>
+            <Input
+              className="mt-3"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(event) =>
+                setScreenshotFiles(Array.from(event.target.files ?? []))
+              }
+            />
+            {(screenshotUrls.length > 0 || screenshotFiles.length > 0) && (
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                {screenshotUrls.map((url) => (
+                  <span key={url} className="rounded-md border bg-card px-2 py-1">
+                    {url.split("/").at(-1)}
+                  </span>
+                ))}
+                {screenshotFiles.map((file) => (
+                  <span key={file.name} className="rounded-md border bg-card px-2 py-1">
+                    {file.name}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="space-y-1.5">
             <Label>Mistakes</Label>
             <Textarea
@@ -531,6 +658,54 @@ export function TradeForm({
             Save & add another
           </Button>
         )}
+      </div>
+    </div>
+  );
+}
+
+function ReviewChips({
+  icon,
+  title,
+  description,
+  items,
+  selected,
+  onToggle,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  items: string[];
+  selected: string[];
+  onToggle: (item: string) => void;
+}) {
+  return (
+    <div className="rounded-lg border bg-background/50 p-4">
+      <div className="flex items-center gap-2">
+        {icon}
+        <div>
+          <h3 className="font-medium">{title}</h3>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {items.map((item) => {
+          const active = selected.includes(item);
+
+          return (
+            <button
+              key={item}
+              type="button"
+              onClick={() => onToggle(item)}
+              className={`rounded-lg border px-3 py-1.5 text-sm transition ${
+                active
+                  ? "border-primary/60 bg-primary/15 text-primary"
+                  : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              {item}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

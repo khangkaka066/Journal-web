@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { computeStats, equityCurve, dailyPnl, learningInsights } from "@/lib/stats";
+import {
+  computeStats,
+  equityCurve,
+  dailyPnl,
+  learningInsights,
+  ruleBreakInsights,
+  weekTrades,
+} from "@/lib/stats";
 import { computePnl, computeRMultiple } from "@/lib/pnl";
 import { deriveSession } from "@/lib/sessions";
 import { FIXTURE } from "./fixtures/trades";
@@ -161,6 +168,48 @@ describe("learningInsights", () => {
       lossCount: 1,
       totalPnl: 50,
     });
+  });
+
+  it("prefers structured mistake tags over free text", () => {
+    const insights = learningInsights([
+      {
+        pnl: -25,
+        entry_time: "2026-06-01T14:00:00Z",
+        exit_time: "2026-06-01T15:00:00Z",
+        mistakes: "messy text",
+        mistake_tags: ["Moved stop"],
+      },
+    ]);
+    expect(insights.mistakeInsights[0].name).toBe("Moved stop");
+  });
+
+  it("summarizes rule breaker cost", () => {
+    const rules = ruleBreakInsights([
+      {
+        pnl: -100,
+        entry_time: "2026-06-01T14:00:00Z",
+        exit_time: "2026-06-01T15:00:00Z",
+        rule_breaks: ["No invalidation"],
+      },
+      {
+        pnl: 50,
+        entry_time: "2026-06-02T14:00:00Z",
+        exit_time: "2026-06-02T15:00:00Z",
+        rule_breaks: ["No invalidation"],
+      },
+    ]);
+    expect(rules[0]).toMatchObject({
+      name: "No invalidation",
+      count: 2,
+      lossCount: 1,
+      totalPnl: -50,
+    });
+  });
+
+  it("filters trades to the active week", () => {
+    const weekly = weekTrades(FIXTURE, TZ, NOW);
+    expect(weekly).toHaveLength(4);
+    expect(weekly.reduce((sum, trade) => sum + trade.pnl, 0)).toBe(-25);
   });
 });
 

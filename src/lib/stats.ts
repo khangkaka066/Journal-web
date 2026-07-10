@@ -7,6 +7,9 @@ export interface StatsTrade {
   setup?: string | null;
   strategy?: string | null;
   mistakes?: string | null;
+  mistake_tags?: string[] | null;
+  rule_breaks?: string[] | null;
+  screenshot_urls?: string[] | null;
 }
 
 export interface DashboardStats {
@@ -170,6 +173,15 @@ export interface LearningInsights {
   mistakeInsights: MistakeInsight[];
 }
 
+export interface RuleBreakInsight {
+  name: string;
+  count: number;
+  lossCount: number;
+  winRate: number;
+  totalPnl: number;
+  avgPnl: number;
+}
+
 function cleanLabel(value: string | null | undefined): string | null {
   const cleaned = value?.trim().replace(/\s+/g, " ");
   return cleaned || null;
@@ -224,7 +236,11 @@ export function learningInsights(trades: StatsTrade[]): LearningInsights {
   const mistakeGroups = new Map<string, StatsTrade[]>();
 
   for (const trade of trades) {
-    for (const mistake of mistakeLabels(trade.mistakes)) {
+    const mistakes = trade.mistake_tags?.length
+      ? trade.mistake_tags
+      : mistakeLabels(trade.mistakes);
+
+    for (const mistake of mistakes) {
       mistakeGroups.set(mistake, [...(mistakeGroups.get(mistake) ?? []), trade]);
     }
   }
@@ -258,4 +274,51 @@ export function learningInsights(trades: StatsTrade[]): LearningInsights {
           a.name.localeCompare(b.name)
       ),
   };
+}
+
+export function ruleBreakInsights(trades: StatsTrade[]): RuleBreakInsight[] {
+  const groups = new Map<string, StatsTrade[]>();
+
+  for (const trade of trades) {
+    for (const rule of trade.rule_breaks ?? []) {
+      const label = cleanLabel(rule);
+      if (!label) continue;
+      groups.set(label, [...(groups.get(label) ?? []), trade]);
+    }
+  }
+
+  return [...groups.entries()]
+    .map(([name, group]) => {
+      const wins = group.filter((trade) => trade.pnl > 0).length;
+      const lossCount = group.filter((trade) => trade.pnl < 0).length;
+      const totalPnl = group.reduce((sum, trade) => sum + trade.pnl, 0);
+
+      return {
+        name,
+        count: group.length,
+        lossCount,
+        winRate: wins / group.length,
+        totalPnl,
+        avgPnl: totalPnl / group.length,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.count - a.count ||
+        a.totalPnl - b.totalPnl ||
+        b.lossCount - a.lossCount ||
+        a.name.localeCompare(b.name)
+    );
+}
+
+export function weekTrades(
+  trades: StatsTrade[],
+  timezone: string,
+  now: Date = new Date()
+): StatsTrade[] {
+  const currentWeek = isoWeekKey(now, timezone);
+  return trades.filter((trade) => {
+    const date = new Date(trade.exit_time ?? trade.entry_time);
+    return isoWeekKey(date, timezone) === currentWeek;
+  });
 }

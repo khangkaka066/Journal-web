@@ -40,6 +40,8 @@ export interface Trade {
   emotion_after: string | null;
   mistakes: string | null;
   lessons: string | null;
+  mistake_tags: string[];
+  rule_breaks: string[];
   trade_checklist: TradeChecklist;
   tags: string[];
   screenshot_urls: string[];

@@ -1,5 +1,5 @@
-import { AlertTriangle, Brain, Target } from "lucide-react";
-import type { LearningInsights } from "@/lib/stats";
+import { AlertTriangle, Brain, ShieldAlert, Target } from "lucide-react";
+import type { LearningInsights, RuleBreakInsight } from "@/lib/stats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function money(value: number) {
@@ -20,14 +20,21 @@ function EmptyRow({ text }: { text: string }) {
   return <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">{text}</div>;
 }
 
-export function LearningInsightsPanel({ insights }: { insights: LearningInsights }) {
+export function LearningInsightsPanel({
+  insights,
+  ruleBreaks = [],
+}: {
+  insights: LearningInsights;
+  ruleBreaks?: RuleBreakInsight[];
+}) {
   const topSetup = insights.setupPerformance[0];
   const topStrategy = insights.strategyPerformance[0];
   const topMistake = insights.mistakeInsights[0];
+  const topRuleBreak = ruleBreaks[0];
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-4">
         <Card className="bg-card/75">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm">
@@ -88,9 +95,29 @@ export function LearningInsightsPanel({ insights }: { insights: LearningInsights
             )}
           </CardContent>
         </Card>
+        <Card className="bg-card/75">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <ShieldAlert className="size-4 text-primary" />
+              Costliest rule break
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topRuleBreak ? (
+              <div>
+                <div className="font-semibold">{topRuleBreak.name}</div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  {topRuleBreak.count} times · {money(topRuleBreak.totalPnl)}
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">Mark broken rules in trades.</div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-4">
         <InsightList
           title="Setup winrate"
           empty="No setup data yet."
@@ -117,6 +144,16 @@ export function LearningInsightsPanel({ insights }: { insights: LearningInsights
           rows={insights.mistakeInsights.slice(0, 5).map((item) => ({
             name: item.name,
             meta: `${item.count} times · ${item.lossCount} losses · avg ${money(item.avgPnl)}`,
+            value: money(item.totalPnl),
+            valueClassName: pnlClass(item.totalPnl),
+          }))}
+        />
+        <InsightList
+          title="Rule breaker cost"
+          empty="No rule breaks tagged yet."
+          rows={ruleBreaks.slice(0, 5).map((item) => ({
+            name: item.name,
+            meta: `${item.count} times · ${item.lossCount} losses · ${pct(item.winRate)} winrate`,
             value: money(item.totalPnl),
             valueClassName: pnlClass(item.totalPnl),
           }))}
