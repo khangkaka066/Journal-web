@@ -1,5 +1,5 @@
 import { AlertTriangle, Brain, ShieldAlert, Target } from "lucide-react";
-import type { LearningInsights, RuleBreakInsight } from "@/lib/stats";
+import type { LearningInsights, RuleBreakInsight, StopDoingInsight } from "@/lib/stats";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function money(value: number) {
@@ -23,18 +23,21 @@ function EmptyRow({ text }: { text: string }) {
 export function LearningInsightsPanel({
   insights,
   ruleBreaks = [],
+  stopDoing = [],
 }: {
   insights: LearningInsights;
   ruleBreaks?: RuleBreakInsight[];
+  stopDoing?: StopDoingInsight[];
 }) {
   const topSetup = insights.setupPerformance[0];
   const topStrategy = insights.strategyPerformance[0];
   const topMistake = insights.mistakeInsights[0];
   const topRuleBreak = ruleBreaks[0];
+  const topStop = stopDoing[0];
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-5">
         <Card className="bg-card/75">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-sm">
@@ -115,6 +118,26 @@ export function LearningInsightsPanel({
             )}
           </CardContent>
         </Card>
+        <Card className="bg-card/75">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm">
+              <AlertTriangle className="size-4 text-destructive" />
+              Stop doing first
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {topStop ? (
+              <div>
+                <div className="font-semibold">{topStop.name}</div>
+                <div className="mt-1 text-sm text-muted-foreground">
+                  {topStop.source} · {money(topStop.totalPnl)} total
+                </div>
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground">Tag mistakes and rule breaks.</div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-4">
@@ -159,6 +182,16 @@ export function LearningInsightsPanel({
           }))}
         />
       </div>
+      <InsightList
+        title="What to stop doing"
+        empty="No negative behavior patterns yet."
+        rows={stopDoing.slice(0, 6).map((item) => ({
+          name: item.name,
+          meta: `${item.source} · ${item.count} times · ${item.lossCount} losses · ${pct(item.winRate)} winrate`,
+          value: money(item.totalPnl),
+          valueClassName: pnlClass(item.totalPnl),
+        }))}
+      />
     </div>
   );
 }

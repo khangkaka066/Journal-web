@@ -57,3 +57,12 @@ export interface Profile {
   timezone: string;
   base_currency: string;
 }
+
+export interface ReviewPresetRecord {
+  user_id: string;
+  checklist: TradeChecklist;
+  mistake_tags: string[];
+  rule_breaks: string[];
+  created_at?: string;
+  updated_at?: string;
+}

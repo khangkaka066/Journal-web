@@ -18,10 +18,23 @@ import { deriveSession } from "@/lib/sessions";
 import type {
   Direction,
   Instrument,
+  ReviewPresetRecord,
   Session,
   Trade,
   TradeChecklist,
 } from "@/lib/types";
+import {
+  CHECKLIST_GROUPS,
+  DEFAULT_REVIEW_PRESETS,
+  EMPTY_CHECKLIST,
+  REVIEW_PRESETS_KEY,
+  type ChecklistDrafts,
+  type ReviewPresets,
+  mergeReviewPresets,
+  normalizeChecklist,
+  parseReviewPresets,
+  uniqueItems,
+} from "@/lib/review-presets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,7 +55,6 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
 
 const DEFAULTS_KEY = "last_trade_defaults";
-const REVIEW_PRESETS_KEY = "trade_review_presets";
 
 interface Defaults {
   instrument_id?: string;
@@ -51,147 +63,31 @@ interface Defaults {
   fees?: string;
 }
 
-const CHECKLIST_GROUPS: {
-  key: keyof TradeChecklist;
-  title: string;
-  items: string[];
-}[] = [
-  {
-    key: "entryModels",
-    title: "Entry model",
-    items: ["CISD", "iFVG", "FVG mitigation", "Liquidity sweep", "Order block", "Breaker"],
-  },
-  {
-    key: "context",
-    title: "Market context",
-    items: ["HTF PDA", "Premium/discount", "Draw on liquidity", "Killzone", "News clear"],
-  },
-  {
-    key: "confirmation",
-    title: "Confirmation",
-    items: ["Absorption", "Exhaustion", "Displacement", "MSS/BOS", "Volume shift"],
-  },
-  {
-    key: "execution",
-    title: "Execution discipline",
-    items: ["Planned entry", "Stop at invalidation", "Target liquidity", "2R+ available", "No chase"],
-  },
-  {
-    key: "review",
-    title: "Review",
-    items: ["Followed plan", "Screenshot saved", "Mistake tagged", "Lesson written"],
-  },
-];
+function loadReviewPresets(
+  savedChecklist: Required<TradeChecklist>,
+  serverPresets?: ReviewPresetRecord | null
+): ReviewPresets {
+  const base = serverPresets
+    ? parseReviewPresets({
+        checklist: serverPresets.checklist,
+        mistakeTags: serverPresets.mistake_tags,
+        ruleBreaks: serverPresets.rule_breaks,
+      })
+    : DEFAULT_REVIEW_PRESETS;
 
-const EMPTY_CHECKLIST: Required<TradeChecklist> = {
-  entryModels: [],
-  context: [],
-  confirmation: [],
-  execution: [],
-  review: [],
-};
-
-const MISTAKE_TAGS = [
-  "Chased entry",
-  "Late entry",
-  "No HTF PDA",
-  "Ignored news",
-  "Moved stop",
-  "Early exit",
-  "Oversized",
-  "Revenge trade",
-  "No liquidity target",
-  "Entered in chop",
-];
-
-const RULE_BREAKS = [
-  "No checklist",
-  "No invalidation",
-  "No 2R available",
-  "Outside killzone",
-  "Against HTF bias",
-  "No displacement",
-  "Entered before confirmation",
-  "Held past plan",
-];
-
-interface ReviewPresets {
-  checklist: Required<TradeChecklist>;
-  mistakeTags: string[];
-  ruleBreaks: string[];
-}
-
-type ChecklistDrafts = Record<keyof TradeChecklist, string>;
-
-const DEFAULT_REVIEW_PRESETS: ReviewPresets = {
-  checklist: {
-    entryModels: CHECKLIST_GROUPS.find((group) => group.key === "entryModels")?.items ?? [],
-    context: CHECKLIST_GROUPS.find((group) => group.key === "context")?.items ?? [],
-    confirmation: CHECKLIST_GROUPS.find((group) => group.key === "confirmation")?.items ?? [],
-    execution: CHECKLIST_GROUPS.find((group) => group.key === "execution")?.items ?? [],
-    review: CHECKLIST_GROUPS.find((group) => group.key === "review")?.items ?? [],
-  },
-  mistakeTags: MISTAKE_TAGS,
-  ruleBreaks: RULE_BREAKS,
-};
-
-function uniqueItems(items: string[]): string[] {
-  return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
-}
-
-function mergeChecklistItems(
-  base: Required<TradeChecklist>,
-  checklist: Required<TradeChecklist>
-): Required<TradeChecklist> {
-  return {
-    entryModels: uniqueItems([...base.entryModels, ...checklist.entryModels]),
-    context: uniqueItems([...base.context, ...checklist.context]),
-    confirmation: uniqueItems([...base.confirmation, ...checklist.confirmation]),
-    execution: uniqueItems([...base.execution, ...checklist.execution]),
-    review: uniqueItems([...base.review, ...checklist.review]),
-  };
-}
-
-function loadReviewPresets(savedChecklist: Required<TradeChecklist>): ReviewPresets {
   if (typeof window === "undefined") {
-    return {
-      ...DEFAULT_REVIEW_PRESETS,
-      checklist: mergeChecklistItems(DEFAULT_REVIEW_PRESETS.checklist, savedChecklist),
-    };
+    return mergeReviewPresets(base, savedChecklist);
   }
 
   try {
     const raw = localStorage.getItem(REVIEW_PRESETS_KEY);
-    if (!raw) {
-      return {
-        ...DEFAULT_REVIEW_PRESETS,
-        checklist: mergeChecklistItems(DEFAULT_REVIEW_PRESETS.checklist, savedChecklist),
-      };
-    }
+    if (!raw || serverPresets) return mergeReviewPresets(base, savedChecklist);
 
     const stored = JSON.parse(raw) as Partial<ReviewPresets>;
-    const storedChecklist = normalizeChecklist(stored.checklist);
-    return {
-      checklist: mergeChecklistItems(storedChecklist, savedChecklist),
-      mistakeTags: uniqueItems(stored.mistakeTags ?? []),
-      ruleBreaks: uniqueItems(stored.ruleBreaks ?? []),
-    };
+    return mergeReviewPresets(parseReviewPresets(stored), savedChecklist);
   } catch {
-    return {
-      ...DEFAULT_REVIEW_PRESETS,
-      checklist: mergeChecklistItems(DEFAULT_REVIEW_PRESETS.checklist, savedChecklist),
-    };
+    return mergeReviewPresets(base, savedChecklist);
   }
-}
-
-function normalizeChecklist(checklist?: TradeChecklist | null): Required<TradeChecklist> {
-  return {
-    entryModels: checklist?.entryModels ?? [],
-    context: checklist?.context ?? [],
-    confirmation: checklist?.confirmation ?? [],
-    execution: checklist?.execution ?? [],
-    review: checklist?.review ?? [],
-  };
 }
 
 function nowLocalInput(): string {
@@ -209,12 +105,14 @@ function toLocalInput(iso: string): string {
 export function TradeForm({
   instruments,
   trade,
+  reviewPreset,
 }: {
   instruments: Instrument[];
   trade?: Trade;
+  reviewPreset?: ReviewPresetRecord | null;
 }) {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [instrumentId, setInstrumentId] = useState(trade?.instrument_id ?? "");
   const [direction, setDirection] = useState<Direction>(trade?.direction ?? "long");
@@ -246,7 +144,7 @@ export function TradeForm({
     normalizeChecklist(trade?.trade_checklist)
   );
   const [reviewPresets, setReviewPresets] = useState<ReviewPresets>(() =>
-    loadReviewPresets(normalizeChecklist(trade?.trade_checklist))
+    loadReviewPresets(normalizeChecklist(trade?.trade_checklist), reviewPreset)
   );
   const [newChecklistItems, setNewChecklistItems] = useState<ChecklistDrafts>({
     entryModels: "",
@@ -283,7 +181,30 @@ export function TradeForm({
 
   useEffect(() => {
     localStorage.setItem(REVIEW_PRESETS_KEY, JSON.stringify(reviewPresets));
-  }, [reviewPresets]);
+
+    let canceled = false;
+    const timeout = window.setTimeout(async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (canceled || userError || !user) return;
+
+      await supabase.from("review_presets").upsert({
+        user_id: user.id,
+        checklist: reviewPresets.checklist,
+        mistake_tags: reviewPresets.mistakeTags,
+        rule_breaks: reviewPresets.ruleBreaks,
+        updated_at: new Date().toISOString(),
+      });
+    }, 500);
+
+    return () => {
+      canceled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [reviewPresets, supabase]);
 
   const instrument = instruments.find((i) => i.id === instrumentId);
 

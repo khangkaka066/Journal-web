@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { SettingsForm } from "@/components/settings-form";
+import { ReviewPresetsForm } from "@/components/review-presets-form";
 import { SlidersHorizontal } from "lucide-react";
 
 export default async function SettingsPage() {
@@ -7,11 +8,10 @@ export default async function SettingsPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user!.id)
-    .single();
+  const [{ data: profile }, { data: reviewPreset }] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", user!.id).single(),
+    supabase.from("review_presets").select("*").eq("user_id", user!.id).maybeSingle(),
+  ]);
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -28,6 +28,7 @@ export default async function SettingsPage() {
       <SettingsForm
         profile={profile ?? { id: user!.id, timezone: "UTC", base_currency: "USD" }}
       />
+      <ReviewPresetsForm userId={user!.id} preset={reviewPreset} />
     </div>
   );
 }

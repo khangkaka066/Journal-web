@@ -4,10 +4,13 @@ import { BadgePlus } from "lucide-react";
 
 export default async function NewTradePage() {
   const supabase = await createClient();
-  const { data: instruments } = await supabase
-    .from("instruments")
-    .select("*")
-    .order("symbol");
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const [{ data: instruments }, { data: reviewPreset }] = await Promise.all([
+    supabase.from("instruments").select("*").order("symbol"),
+    supabase.from("review_presets").select("*").eq("user_id", user!.id).maybeSingle(),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -21,7 +24,7 @@ export default async function NewTradePage() {
           Required fields first, optional review notes when the session cools down.
         </p>
       </div>
-      <TradeForm instruments={instruments ?? []} />
+      <TradeForm instruments={instruments ?? []} reviewPreset={reviewPreset} />
     </div>
   );
 }

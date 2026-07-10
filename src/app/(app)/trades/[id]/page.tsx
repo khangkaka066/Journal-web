@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { PencilLine } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { TradeForm } from "@/components/trades/trade-form";
+import { ScreenshotGallery, type ScreenshotView } from "@/components/trades/screenshot-gallery";
 
 export default async function EditTradePage({
   params,
@@ -10,12 +11,28 @@ export default async function EditTradePage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const [{ data: trade }, { data: instruments }] = await Promise.all([
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const [{ data: trade }, { data: instruments }, { data: reviewPreset }] = await Promise.all([
     supabase.from("trades").select("*").eq("id", id).single(),
     supabase.from("instruments").select("*").order("symbol"),
+    supabase.from("review_presets").select("*").eq("user_id", user!.id).maybeSingle(),
   ]);
 
   if (!trade) notFound();
+
+  let screenshots: ScreenshotView[] = [];
+  if (trade.screenshot_urls.length > 0) {
+    const { data } = await supabase.storage
+      .from("screenshots")
+      .createSignedUrls(trade.screenshot_urls, 60 * 60);
+
+    screenshots = (data ?? []).flatMap((item) => {
+      if (!item.path || !item.signedUrl) return [];
+      return [{ path: item.path, url: item.signedUrl }];
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -29,7 +46,8 @@ export default async function EditTradePage({
           Update execution details and keep the lesson attached to the record.
         </p>
       </div>
-      <TradeForm instruments={instruments ?? []} trade={trade} />
+      <ScreenshotGallery screenshots={screenshots} />
+      <TradeForm instruments={instruments ?? []} trade={trade} reviewPreset={reviewPreset} />
     </div>
   );
 }

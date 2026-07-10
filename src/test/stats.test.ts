@@ -5,6 +5,7 @@ import {
   dailyPnl,
   learningInsights,
   ruleBreakInsights,
+  stopDoingInsights,
   weekTrades,
 } from "@/lib/stats";
 import { computePnl, computeRMultiple } from "@/lib/pnl";
@@ -203,6 +204,36 @@ describe("learningInsights", () => {
       count: 2,
       lossCount: 1,
       totalPnl: -50,
+    });
+  });
+
+  it("prioritizes the costliest stop-doing behavior", () => {
+    const stopDoing = stopDoingInsights([
+      {
+        pnl: -120,
+        entry_time: "2026-06-01T14:00:00Z",
+        exit_time: "2026-06-01T15:00:00Z",
+        mistake_tags: ["Moved stop"],
+        rule_breaks: ["No invalidation"],
+      },
+      {
+        pnl: 20,
+        entry_time: "2026-06-02T14:00:00Z",
+        exit_time: "2026-06-02T15:00:00Z",
+        mistake_tags: ["Moved stop"],
+      },
+      {
+        pnl: -30,
+        entry_time: "2026-06-03T14:00:00Z",
+        exit_time: "2026-06-03T15:00:00Z",
+        rule_breaks: ["Outside killzone"],
+      },
+    ]);
+
+    expect(stopDoing[0]).toMatchObject({
+      name: "No invalidation",
+      source: "Rule",
+      totalPnl: -120,
     });
   });
 

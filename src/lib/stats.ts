@@ -4,6 +4,8 @@ export interface StatsTrade {
   pnl: number;
   exit_time: string | null;
   entry_time: string;
+  instrument_id?: string | null;
+  session?: string | null;
   setup?: string | null;
   strategy?: string | null;
   mistakes?: string | null;
@@ -182,6 +184,16 @@ export interface RuleBreakInsight {
   avgPnl: number;
 }
 
+export interface StopDoingInsight {
+  name: string;
+  source: "Mistake" | "Rule";
+  count: number;
+  lossCount: number;
+  winRate: number;
+  totalPnl: number;
+  avgPnl: number;
+}
+
 function cleanLabel(value: string | null | undefined): string | null {
   const cleaned = value?.trim().replace(/\s+/g, " ");
   return cleaned || null;
@@ -307,6 +319,61 @@ export function ruleBreakInsights(trades: StatsTrade[]): RuleBreakInsight[] {
         b.count - a.count ||
         a.totalPnl - b.totalPnl ||
         b.lossCount - a.lossCount ||
+        a.name.localeCompare(b.name)
+    );
+}
+
+export function stopDoingInsights(trades: StatsTrade[]): StopDoingInsight[] {
+  const groups = new Map<string, { source: StopDoingInsight["source"]; trades: StatsTrade[] }>();
+
+  for (const trade of trades) {
+    const mistakes = trade.mistake_tags?.length
+      ? trade.mistake_tags
+      : mistakeLabels(trade.mistakes);
+
+    for (const mistake of mistakes) {
+      const label = cleanLabel(mistake);
+      if (!label) continue;
+      const key = `Mistake:${label}`;
+      groups.set(key, {
+        source: "Mistake",
+        trades: [...(groups.get(key)?.trades ?? []), trade],
+      });
+    }
+
+    for (const rule of trade.rule_breaks ?? []) {
+      const label = cleanLabel(rule);
+      if (!label) continue;
+      const key = `Rule:${label}`;
+      groups.set(key, {
+        source: "Rule",
+        trades: [...(groups.get(key)?.trades ?? []), trade],
+      });
+    }
+  }
+
+  return [...groups.entries()]
+    .map(([key, value]) => {
+      const name = key.split(":").slice(1).join(":");
+      const wins = value.trades.filter((trade) => trade.pnl > 0).length;
+      const lossCount = value.trades.filter((trade) => trade.pnl < 0).length;
+      const totalPnl = value.trades.reduce((sum, trade) => sum + trade.pnl, 0);
+
+      return {
+        name,
+        source: value.source,
+        count: value.trades.length,
+        lossCount,
+        winRate: wins / value.trades.length,
+        totalPnl,
+        avgPnl: totalPnl / value.trades.length,
+      };
+    })
+    .sort(
+      (a, b) =>
+        a.totalPnl - b.totalPnl ||
+        b.lossCount - a.lossCount ||
+        b.count - a.count ||
         a.name.localeCompare(b.name)
     );
 }
