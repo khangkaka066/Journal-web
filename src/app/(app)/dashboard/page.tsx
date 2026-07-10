@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Plus, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { computeStats, equityCurve, dailyPnl } from "@/lib/stats";
+import { computeStats, equityCurve, dailyPnl, learningInsights } from "@/lib/stats";
 import { StatTiles } from "@/components/dashboard/stat-tiles";
 import { EquityCurve } from "@/components/dashboard/equity-curve";
 import { CalendarHeatmap } from "@/components/dashboard/calendar-heatmap";
+import { LearningInsightsPanel } from "@/components/dashboard/learning-insights";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -17,7 +18,7 @@ export default async function DashboardPage() {
   const [{ data: trades }, { data: profile }] = await Promise.all([
     supabase
       .from("trades")
-      .select("pnl, entry_time, exit_time")
+      .select("pnl, entry_time, exit_time, setup, strategy, mistakes")
       .order("entry_time", { ascending: true }),
     supabase.from("profiles").select("timezone").eq("id", user!.id).single(),
   ]);
@@ -27,6 +28,7 @@ export default async function DashboardPage() {
   const stats = computeStats(all, tz);
   const curve = equityCurve(all, tz);
   const daily = dailyPnl(all, tz);
+  const insights = learningInsights(all);
 
   return (
     <div className="space-y-6">
@@ -60,6 +62,8 @@ export default async function DashboardPage() {
       )}
 
       <StatTiles stats={stats} />
+
+      <LearningInsightsPanel insights={insights} />
 
       <div className="grid gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">

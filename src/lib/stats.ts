@@ -4,6 +4,9 @@ export interface StatsTrade {
   pnl: number;
   exit_time: string | null;
   entry_time: string;
+  setup?: string | null;
+  strategy?: string | null;
+  mistakes?: string | null;
 }
 
 export interface DashboardStats {
@@ -141,4 +144,118 @@ export function dailyPnl(trades: StatsTrade[], timezone: string): DailyPnl {
     map[key].count++;
   }
   return map;
+}
+
+export interface GroupPerformance {
+  name: string;
+  trades: number;
+  wins: number;
+  losses: number;
+  winRate: number;
+  totalPnl: number;
+  avgPnl: number;
+}
+
+export interface MistakeInsight {
+  name: string;
+  count: number;
+  lossCount: number;
+  avgPnl: number;
+  totalPnl: number;
+}
+
+export interface LearningInsights {
+  setupPerformance: GroupPerformance[];
+  strategyPerformance: GroupPerformance[];
+  mistakeInsights: MistakeInsight[];
+}
+
+function cleanLabel(value: string | null | undefined): string | null {
+  const cleaned = value?.trim().replace(/\s+/g, " ");
+  return cleaned || null;
+}
+
+function groupPerformance(
+  trades: StatsTrade[],
+  getLabel: (trade: StatsTrade) => string | null | undefined
+): GroupPerformance[] {
+  const groups = new Map<string, StatsTrade[]>();
+
+  for (const trade of trades) {
+    const label = cleanLabel(getLabel(trade));
+    if (!label) continue;
+
+    groups.set(label, [...(groups.get(label) ?? []), trade]);
+  }
+
+  return [...groups.entries()]
+    .map(([name, group]) => {
+      const wins = group.filter((trade) => trade.pnl > 0).length;
+      const losses = group.filter((trade) => trade.pnl < 0).length;
+      const totalPnl = group.reduce((sum, trade) => sum + trade.pnl, 0);
+
+      return {
+        name,
+        trades: group.length,
+        wins,
+        losses,
+        winRate: wins / group.length,
+        totalPnl,
+        avgPnl: totalPnl / group.length,
+      };
+    })
+    .sort(
+      (a, b) =>
+        b.winRate - a.winRate ||
+        b.trades - a.trades ||
+        b.totalPnl - a.totalPnl ||
+        a.name.localeCompare(b.name)
+    );
+}
+
+function mistakeLabels(value: string | null | undefined): string[] {
+  return (value ?? "")
+    .split(/[,;\n]/)
+    .map((part) => cleanLabel(part))
+    .filter((part): part is string => Boolean(part));
+}
+
+export function learningInsights(trades: StatsTrade[]): LearningInsights {
+  const mistakeGroups = new Map<string, StatsTrade[]>();
+
+  for (const trade of trades) {
+    for (const mistake of mistakeLabels(trade.mistakes)) {
+      mistakeGroups.set(mistake, [...(mistakeGroups.get(mistake) ?? []), trade]);
+    }
+  }
+
+  return {
+    setupPerformance: groupPerformance(trades, (trade) => trade.setup),
+    strategyPerformance: groupPerformance(trades, (trade) => trade.strategy).sort(
+      (a, b) =>
+        b.wins - a.wins ||
+        b.winRate - a.winRate ||
+        b.totalPnl - a.totalPnl ||
+        a.name.localeCompare(b.name)
+    ),
+    mistakeInsights: [...mistakeGroups.entries()]
+      .map(([name, group]) => {
+        const totalPnl = group.reduce((sum, trade) => sum + trade.pnl, 0);
+
+        return {
+          name,
+          count: group.length,
+          lossCount: group.filter((trade) => trade.pnl < 0).length,
+          avgPnl: totalPnl / group.length,
+          totalPnl,
+        };
+      })
+      .sort(
+        (a, b) =>
+          b.count - a.count ||
+          b.lossCount - a.lossCount ||
+          a.avgPnl - b.avgPnl ||
+          a.name.localeCompare(b.name)
+      ),
+  };
 }

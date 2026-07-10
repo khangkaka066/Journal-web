@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeStats, equityCurve, dailyPnl } from "@/lib/stats";
+import { computeStats, equityCurve, dailyPnl, learningInsights } from "@/lib/stats";
 import { computePnl, computeRMultiple } from "@/lib/pnl";
 import { deriveSession } from "@/lib/sessions";
 import { FIXTURE } from "./fixtures/trades";
@@ -96,6 +96,71 @@ describe("dailyPnl", () => {
     const d = dailyPnl(FIXTURE, TZ);
     expect(d["2026-06-01"]).toEqual({ pnl: 50, count: 2 });
     expect(d["2026-06-05"]).toEqual({ pnl: 300, count: 1 });
+  });
+});
+
+describe("learningInsights", () => {
+  const trades = [
+    {
+      pnl: 100,
+      entry_time: "2026-06-01T14:00:00Z",
+      exit_time: "2026-06-01T15:00:00Z",
+      setup: "CISD",
+      strategy: "NY AM",
+      mistakes: "chased, late entry",
+    },
+    {
+      pnl: -50,
+      entry_time: "2026-06-02T14:00:00Z",
+      exit_time: "2026-06-02T15:00:00Z",
+      setup: "iFVG",
+      strategy: "NY AM",
+      mistakes: "chased",
+    },
+    {
+      pnl: 150,
+      entry_time: "2026-06-03T14:00:00Z",
+      exit_time: "2026-06-03T15:00:00Z",
+      setup: "CISD",
+      strategy: "London continuation",
+      mistakes: "",
+    },
+    {
+      pnl: 75,
+      entry_time: "2026-06-04T14:00:00Z",
+      exit_time: "2026-06-04T15:00:00Z",
+      setup: "iFVG",
+      strategy: "NY AM",
+      mistakes: "late entry",
+    },
+  ];
+
+  it("ranks setup by winrate then sample size", () => {
+    const insights = learningInsights(trades);
+    expect(insights.setupPerformance[0]).toMatchObject({
+      name: "CISD",
+      trades: 2,
+      wins: 2,
+      winRate: 1,
+      totalPnl: 250,
+    });
+  });
+
+  it("ranks strategy by most wins", () => {
+    const insights = learningInsights(trades);
+    expect(insights.strategyPerformance[0].name).toBe("NY AM");
+    expect(insights.strategyPerformance[0].wins).toBe(2);
+    expect(insights.strategyPerformance[0].trades).toBe(3);
+  });
+
+  it("extracts repeated mistakes from comma/newline separated text", () => {
+    const insights = learningInsights(trades);
+    expect(insights.mistakeInsights[0]).toMatchObject({
+      name: "chased",
+      count: 2,
+      lossCount: 1,
+      totalPnl: 50,
+    });
   });
 });
 
