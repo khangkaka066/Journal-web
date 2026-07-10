@@ -428,7 +428,7 @@ export function TradeForm({
                 pnl == null ? "" : pnl >= 0 ? "text-emerald-400" : "text-red-400"
               }`}
             >
-              {pnl == null || isNaN(pnl) ? "—" : `$${pnl.toFixed(2)}`}
+              {pnl == null || isNaN(pnl) ? "N/A" : `$${pnl.toFixed(2)}`}
               {rMultiple != null && !isNaN(rMultiple) && (
                 <span className="ml-2 align-middle text-sm text-muted-foreground">
                   {rMultiple.toFixed(2)}R

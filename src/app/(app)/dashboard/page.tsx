@@ -12,6 +12,7 @@ import { StatTiles } from "@/components/dashboard/stat-tiles";
 import { EquityCurve } from "@/components/dashboard/equity-curve";
 import { CalendarHeatmap } from "@/components/dashboard/calendar-heatmap";
 import { LearningInsightsPanel } from "@/components/dashboard/learning-insights";
+import { MarketDepthScene } from "@/components/dashboard/market-depth-scene";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -39,7 +40,11 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col justify-between gap-4 rounded-xl border bg-card/75 p-5 shadow-sm sm:flex-row sm:items-center">
+      <div className="relative min-h-[18rem] overflow-hidden rounded-xl border bg-card/75 p-5 shadow-sm sm:min-h-[20rem] sm:p-6">
+        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-3/5 opacity-95 lg:block">
+          <MarketDepthScene />
+        </div>
+        <div className="relative z-10 flex max-w-2xl flex-col justify-between gap-8">
         <div className="space-y-2">
           <div className="inline-flex items-center gap-2 rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground">
             <Sparkles className="size-3.5 text-primary" />
@@ -56,11 +61,12 @@ export default async function DashboardPage() {
           <Plus className="size-4" />
           New trade
         </Button>
+        </div>
       </div>
 
       {all.length === 0 && (
         <div className="rounded-xl border border-dashed bg-card/60 p-8 text-center text-muted-foreground">
-          No trades yet —{" "}
+          No trades yet.{" "}
           <Link href="/trades/new" className="underline">
             log your first trade
           </Link>{" "}

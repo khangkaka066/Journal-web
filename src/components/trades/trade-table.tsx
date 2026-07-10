@@ -103,12 +103,12 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
                 {t.pnl.toFixed(2)}
               </TableCell>
               <TableCell className="text-right tabular-nums text-muted-foreground">
-                {t.r_multiple != null ? `${t.r_multiple.toFixed(2)}R` : "—"}
+                {t.r_multiple != null ? `${t.r_multiple.toFixed(2)}R` : "N/A"}
               </TableCell>
               <TableCell className="text-right tabular-nums text-muted-foreground">
                 {checklistCount(t)}
               </TableCell>
-              <TableCell className="text-muted-foreground">{t.session ?? "—"}</TableCell>
+              <TableCell className="text-muted-foreground">{t.session ?? "N/A"}</TableCell>
               <TableCell className="text-right">
                 <AlertDialog>
                   <AlertDialogTrigger

@@ -16,6 +16,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { MarketDepthScene } from "@/components/dashboard/market-depth-scene";
 import { toast } from "sonner";
 
 export default function LoginPage() {
@@ -61,7 +62,10 @@ export default function LoginPage() {
 
   return (
     <div className="grid min-h-screen bg-background lg:grid-cols-[1fr_440px]">
-      <section className="hidden min-h-screen flex-col justify-between border-r bg-card/40 p-10 lg:flex">
+      <section className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r bg-card/40 p-10 lg:flex">
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-3/5 opacity-70">
+          <MarketDepthScene />
+        </div>
         <div className="flex items-center gap-3">
           <div className="flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <TrendingUp className="size-5" />
@@ -71,7 +75,7 @@ export default function LoginPage() {
             <div className="text-xs text-muted-foreground">Execution review desk</div>
           </div>
         </div>
-        <div className="max-w-xl space-y-7">
+        <div className="relative z-10 max-w-xl space-y-7">
           <div className="inline-flex items-center gap-2 rounded-full border bg-background/70 px-3 py-1 text-xs text-muted-foreground">
             <BarChart3 className="size-3.5 text-primary" />
             Journal, measure, refine
@@ -86,7 +90,7 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
-        <div className="grid max-w-xl grid-cols-3 gap-3 text-sm">
+        <div className="relative z-10 grid max-w-xl grid-cols-3 gap-3 text-sm">
           {["PnL curve", "R multiples", "Session review"].map((item) => (
             <div key={item} className="rounded-lg border bg-background/60 p-3">
               <div className="font-medium">{item}</div>
@@ -95,7 +99,10 @@ export default function LoginPage() {
           ))}
         </div>
       </section>
-      <div className="flex min-h-screen items-center justify-center p-4 sm:p-6">
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-4 sm:p-6">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-64 opacity-45 lg:hidden">
+          <MarketDepthScene />
+        </div>
         <Card className="w-full max-w-sm border-border/70 shadow-2xl shadow-black/10">
           <CardHeader className="space-y-2">
             <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary lg:hidden">

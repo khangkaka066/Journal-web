@@ -2,13 +2,13 @@ import type { DashboardStats } from "@/lib/stats";
 import { Card, CardContent } from "@/components/ui/card";
 
 function money(v: number | null): string {
-  if (v == null) return "—";
+  if (v == null) return "N/A";
   const sign = v < 0 ? "-" : "";
   return `${sign}$${Math.abs(v).toFixed(2)}`;
 }
 
 function pct(v: number | null): string {
-  return v == null ? "—" : `${(v * 100).toFixed(1)}%`;
+  return v == null ? "N/A" : `${(v * 100).toFixed(1)}%`;
 }
 
 function polarity(v: number | null): string {
@@ -22,7 +22,7 @@ export function StatTiles({ stats }: { stats: DashboardStats }) {
     { label: "Win rate", value: pct(stats.winRate) },
     {
       label: "Profit factor",
-      value: stats.profitFactor == null ? "—" : stats.profitFactor.toFixed(2),
+      value: stats.profitFactor == null ? "N/A" : stats.profitFactor.toFixed(2),
     },
     { label: "Expectancy", value: money(stats.expectancy), className: polarity(stats.expectancy) },
     { label: "Avg winner", value: money(stats.avgWin) },
@@ -33,7 +33,7 @@ export function StatTiles({ stats }: { stats: DashboardStats }) {
     { label: "Largest loss", value: money(stats.largestLoss) },
     {
       label: "Streak",
-      value: stats.streak ? `${stats.streak.count} ${stats.streak.type}${stats.streak.count > 1 ? "s" : ""}` : "—",
+      value: stats.streak ? `${stats.streak.count} ${stats.streak.type}${stats.streak.count > 1 ? "s" : ""}` : "N/A",
       className: stats.streak ? (stats.streak.type === "win" ? "text-emerald-400" : "text-red-400") : "",
     },
     { label: "This week", value: money(stats.weeklyPnl), className: polarity(stats.weeklyPnl) },
