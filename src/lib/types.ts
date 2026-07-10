@@ -1,6 +1,14 @@
 export type Direction = "long" | "short";
 export type Session = "asia" | "london" | "new_york";
 
+export interface TradeChecklist {
+  entryModels?: string[];
+  context?: string[];
+  confirmation?: string[];
+  execution?: string[];
+  review?: string[];
+}
+
 export interface Instrument {
   id: string;
   user_id: string | null;
@@ -32,6 +40,7 @@ export interface Trade {
   emotion_after: string | null;
   mistakes: string | null;
   lessons: string | null;
+  trade_checklist: TradeChecklist;
   tags: string[];
   screenshot_urls: string[];
   notes: string | null;

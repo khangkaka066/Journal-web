@@ -28,6 +28,19 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
+function checklistCount(trade: Trade) {
+  const checklist = trade.trade_checklist;
+  if (!checklist) return 0;
+
+  return [
+    checklist.entryModels,
+    checklist.context,
+    checklist.confirmation,
+    checklist.execution,
+    checklist.review,
+  ].reduce((sum, group) => sum + (group?.length ?? 0), 0);
+}
+
 export function TradeTable({ trades }: { trades: Trade[] }) {
   const router = useRouter();
 
@@ -51,6 +64,7 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
             <TableHead className="text-right">Qty</TableHead>
             <TableHead className="text-right">PnL</TableHead>
             <TableHead className="text-right">R</TableHead>
+            <TableHead className="text-right">Checks</TableHead>
             <TableHead>Session</TableHead>
             <TableHead />
           </TableRow>
@@ -90,6 +104,9 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
               </TableCell>
               <TableCell className="text-right tabular-nums text-muted-foreground">
                 {t.r_multiple != null ? `${t.r_multiple.toFixed(2)}R` : "—"}
+              </TableCell>
+              <TableCell className="text-right tabular-nums text-muted-foreground">
+                {checklistCount(t)}
               </TableCell>
               <TableCell className="text-muted-foreground">{t.session ?? "—"}</TableCell>
               <TableCell className="text-right">

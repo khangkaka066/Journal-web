@@ -4,7 +4,8 @@ Quantitative trading journal — Next.js + Supabase + Recharts.
 
 ## Setup
 
-1. **Supabase**: open your project's SQL editor and run `supabase/migrations/0001_init.sql`.
+1. **Supabase**: open your project's SQL editor and run the files in `supabase/migrations/`
+   in order (`0001_init.sql`, then any later migration such as `0002_trade_checklist.sql`).
    Then in Authentication → Providers, enable **Google** and add
    `http://localhost:3000/auth/callback` (and your production URL) to the redirect URLs.
 2. **Env**: copy `.env.local.example` to `.env.local` and fill in your project URL and anon key

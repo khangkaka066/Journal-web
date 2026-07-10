@@ -6,7 +6,13 @@ import { ChevronDown, Save, Send, WalletCards } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { computePnl, computeRMultiple } from "@/lib/pnl";
 import { deriveSession } from "@/lib/sessions";
-import type { Direction, Instrument, Session, Trade } from "@/lib/types";
+import type {
+  Direction,
+  Instrument,
+  Session,
+  Trade,
+  TradeChecklist,
+} from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,6 +39,56 @@ interface Defaults {
   direction?: Direction;
   quantity?: string;
   fees?: string;
+}
+
+const CHECKLIST_GROUPS: {
+  key: keyof TradeChecklist;
+  title: string;
+  items: string[];
+}[] = [
+  {
+    key: "entryModels",
+    title: "Entry model",
+    items: ["CISD", "iFVG", "FVG mitigation", "Liquidity sweep", "Order block", "Breaker"],
+  },
+  {
+    key: "context",
+    title: "Market context",
+    items: ["HTF PDA", "Premium/discount", "Draw on liquidity", "Killzone", "News clear"],
+  },
+  {
+    key: "confirmation",
+    title: "Confirmation",
+    items: ["Absorption", "Exhaustion", "Displacement", "MSS/BOS", "Volume shift"],
+  },
+  {
+    key: "execution",
+    title: "Execution discipline",
+    items: ["Planned entry", "Stop at invalidation", "Target liquidity", "2R+ available", "No chase"],
+  },
+  {
+    key: "review",
+    title: "Review",
+    items: ["Followed plan", "Screenshot saved", "Mistake tagged", "Lesson written"],
+  },
+];
+
+const EMPTY_CHECKLIST: Required<TradeChecklist> = {
+  entryModels: [],
+  context: [],
+  confirmation: [],
+  execution: [],
+  review: [],
+};
+
+function normalizeChecklist(checklist?: TradeChecklist | null): Required<TradeChecklist> {
+  return {
+    entryModels: checklist?.entryModels ?? [],
+    context: checklist?.context ?? [],
+    confirmation: checklist?.confirmation ?? [],
+    execution: checklist?.execution ?? [],
+    review: checklist?.review ?? [],
+  };
 }
 
 function nowLocalInput(): string {
@@ -81,6 +137,9 @@ export function TradeForm({
   const [emotionAfter, setEmotionAfter] = useState(trade?.emotion_after ?? "");
   const [mistakes, setMistakes] = useState(trade?.mistakes ?? "");
   const [lessons, setLessons] = useState(trade?.lessons ?? "");
+  const [tradeChecklist, setTradeChecklist] = useState<Required<TradeChecklist>>(
+    normalizeChecklist(trade?.trade_checklist)
+  );
   const [tags, setTags] = useState(trade?.tags?.join(", ") ?? "");
   const [notes, setNotes] = useState(trade?.notes ?? "");
   const [saving, setSaving] = useState(false);
@@ -122,6 +181,25 @@ export function TradeForm({
   const pnl = pnlOverride !== "" ? parseFloat(pnlOverride) : autoPnl;
   const rMultiple = pnl != null ? computeRMultiple(pnl, parseFloat(risk) || null) : null;
   const autoSession = entryTime ? deriveSession(new Date(entryTime)) : null;
+  const totalChecklistItems = CHECKLIST_GROUPS.reduce(
+    (sum, group) => sum + group.items.length,
+    0
+  );
+  const selectedChecklistItems = CHECKLIST_GROUPS.reduce(
+    (sum, group) => sum + tradeChecklist[group.key].length,
+    0
+  );
+
+  function toggleChecklistItem(group: keyof TradeChecklist, item: string) {
+    setTradeChecklist((current) => {
+      const selected = current[group];
+      const nextSelected = selected.includes(item)
+        ? selected.filter((value) => value !== item)
+        : [...selected, item];
+
+      return { ...current, [group]: nextSelected };
+    });
+  }
 
   async function save(addAnother: boolean) {
     if (!instrumentId || !entryPrice || !exitPrice || !quantity || !entryTime) {
@@ -151,6 +229,7 @@ export function TradeForm({
       emotion_after: emotionAfter || null,
       mistakes: mistakes || null,
       lessons: lessons || null,
+      trade_checklist: tradeChecklist,
       tags: tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
       notes: notes || null,
     };
@@ -175,6 +254,7 @@ export function TradeForm({
       setExitTime("");
       setPnlOverride("");
       setRisk("");
+      setTradeChecklist(EMPTY_CHECKLIST);
       setNotes("");
       router.refresh();
     } else {
@@ -303,6 +383,48 @@ export function TradeForm({
           More details
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-4 pt-4">
+          <div className="rounded-lg border bg-background/50 p-4">
+            <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+              <div>
+                <h3 className="font-medium">Setup checklist</h3>
+                <p className="text-sm text-muted-foreground">
+                  {selectedChecklistItems}/{totalChecklistItems} conditions checked
+                </p>
+              </div>
+              <div className="rounded-lg bg-muted px-3 py-1.5 text-sm font-medium tabular-nums">
+                {Math.round((selectedChecklistItems / totalChecklistItems) * 100)}%
+              </div>
+            </div>
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              {CHECKLIST_GROUPS.map((group) => (
+                <div key={group.key} className="space-y-2">
+                  <div className="text-xs font-medium uppercase text-muted-foreground">
+                    {group.title}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {group.items.map((item) => {
+                      const selected = tradeChecklist[group.key].includes(item);
+
+                      return (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => toggleChecklistItem(group.key, item)}
+                          className={`rounded-lg border px-3 py-1.5 text-sm transition ${
+                            selected
+                              ? "border-primary/60 bg-primary/15 text-primary"
+                              : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                          }`}
+                        >
+                          {item}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Exit time</Label>
@@ -370,15 +492,30 @@ export function TradeForm({
           </div>
           <div className="space-y-1.5">
             <Label>Mistakes</Label>
-            <Textarea rows={2} value={mistakes} onChange={(e) => setMistakes(e.target.value)} />
+            <Textarea
+              rows={2}
+              placeholder="What rule did you break, or what almost broke?"
+              value={mistakes}
+              onChange={(e) => setMistakes(e.target.value)}
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Lessons learned</Label>
-            <Textarea rows={2} value={lessons} onChange={(e) => setLessons(e.target.value)} />
+            <Textarea
+              rows={2}
+              placeholder="What should be repeated, avoided, or tested next?"
+              value={lessons}
+              onChange={(e) => setLessons(e.target.value)}
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Notes</Label>
-            <Textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <Textarea
+              rows={3}
+              placeholder="Narrative, HTF story, target, management, screenshots link..."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
           </div>
         </CollapsibleContent>
       </Collapsible>
