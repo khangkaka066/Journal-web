@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { SettingsForm } from "@/components/settings-form";
+import { SlidersHorizontal } from "lucide-react";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -13,8 +14,17 @@ export default async function SettingsPage() {
     .single();
 
   return (
-    <div className="max-w-md space-y-6">
-      <h1 className="text-2xl font-semibold">Settings</h1>
+    <div className="max-w-2xl space-y-6">
+      <div className="rounded-xl border bg-card/75 p-5 shadow-sm">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <SlidersHorizontal className="size-4 text-primary" />
+          Workspace preferences
+        </div>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Align reporting with your timezone and base currency.
+        </p>
+      </div>
       <SettingsForm
         profile={profile ?? { id: user!.id, timezone: "UTC", base_currency: "USD" }}
       />

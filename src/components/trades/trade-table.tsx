@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Trade } from "@/lib/types";
 import {
@@ -38,9 +39,9 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
   }
 
   return (
-    <div className="overflow-x-auto rounded-lg border">
+    <div className="overflow-x-auto rounded-xl border bg-card/80 shadow-sm">
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-muted/50">
           <TableRow>
             <TableHead>Date</TableHead>
             <TableHead>Instrument</TableHead>
@@ -56,9 +57,9 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
         </TableHeader>
         <TableBody>
           {trades.map((t) => (
-            <TableRow key={t.id}>
+            <TableRow key={t.id} className="hover:bg-muted/35">
               <TableCell className="whitespace-nowrap">
-                <Link href={`/trades/${t.id}`} className="hover:underline">
+                <Link href={`/trades/${t.id}`} className="font-medium hover:underline">
                   {new Date(t.entry_time).toLocaleString(undefined, {
                     month: "short",
                     day: "numeric",
@@ -69,7 +70,10 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
               </TableCell>
               <TableCell className="font-medium">{t.instruments?.symbol}</TableCell>
               <TableCell>
-                <Badge variant={t.direction === "long" ? "default" : "destructive"}>
+                <Badge
+                  variant={t.direction === "long" ? "default" : "destructive"}
+                  className="capitalize"
+                >
                   {t.direction}
                 </Badge>
               </TableCell>
@@ -92,10 +96,15 @@ export function TradeTable({ trades }: { trades: Trade[] }) {
                 <AlertDialog>
                   <AlertDialogTrigger
                     render={
-                      <Button variant="ghost" size="sm" className="text-muted-foreground" />
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-muted-foreground hover:text-destructive"
+                        aria-label="Delete trade"
+                      />
                     }
                   >
-                    ✕
+                    <Trash2 className="size-4" />
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>

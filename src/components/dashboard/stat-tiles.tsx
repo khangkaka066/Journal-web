@@ -43,10 +43,12 @@ export function StatTiles({ stats }: { stats: DashboardStats }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
       {tiles.map((t) => (
-        <Card key={t.label} className="py-3">
+        <Card key={t.label} className="border-border/70 bg-card/75 py-3 shadow-sm">
           <CardContent className="px-4">
-            <div className="text-xs text-muted-foreground">{t.label}</div>
-            <div className={`mt-1 text-lg font-semibold tabular-nums ${t.className ?? ""}`}>
+            <div className="text-xs font-medium uppercase text-muted-foreground">
+              {t.label}
+            </div>
+            <div className={`mt-1 text-xl font-semibold tabular-nums ${t.className ?? ""}`}>
               {t.value}
             </div>
           </CardContent>

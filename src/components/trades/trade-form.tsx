@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronDown, Save, Send, WalletCards } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { computePnl, computeRMultiple } from "@/lib/pnl";
 import { deriveSession } from "@/lib/sessions";
@@ -183,9 +184,24 @@ export function TradeForm({
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-4xl space-y-6">
       {/* Required fields */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="rounded-xl border bg-card/80 p-4 shadow-sm sm:p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h2 className="font-semibold">Execution</h2>
+            <p className="text-sm text-muted-foreground">
+              Instrument, side, sizing, and prices.
+            </p>
+          </div>
+          <div className="rounded-lg border bg-background px-3 py-2 text-right">
+            <div className="text-xs text-muted-foreground">Auto session</div>
+            <div className="text-sm font-medium capitalize">
+              {(autoSession ?? "pending").replace("_", " ")}
+            </div>
+          </div>
+        </div>
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
           <Label>Instrument *</Label>
           <Select value={instrumentId} onValueChange={(v) => v && setInstrumentId(v)}>
@@ -209,10 +225,16 @@ export function TradeForm({
             value={[direction]}
             onValueChange={(v: string[]) => v[0] && setDirection(v[0] as Direction)}
           >
-            <ToggleGroupItem value="long" className="flex-1 data-[state=on]:bg-emerald-950 data-[state=on]:text-emerald-400">
+            <ToggleGroupItem
+              value="long"
+              className="flex-1 data-[state=on]:bg-emerald-500/15 data-[state=on]:text-emerald-400"
+            >
               Long
             </ToggleGroupItem>
-            <ToggleGroupItem value="short" className="flex-1 data-[state=on]:bg-red-950 data-[state=on]:text-red-400">
+            <ToggleGroupItem
+              value="short"
+              className="flex-1 data-[state=on]:bg-red-500/15 data-[state=on]:text-red-400"
+            >
               Short
             </ToggleGroupItem>
           </ToggleGroup>
@@ -234,25 +256,31 @@ export function TradeForm({
           <Input type="datetime-local" value={entryTime} onChange={(e) => setEntryTime(e.target.value)} />
         </div>
       </div>
+      </div>
 
       {/* Live PnL preview */}
-      <div className="flex items-center justify-between rounded-lg border p-3">
-        <div>
-          <div className="text-sm text-muted-foreground">PnL</div>
-          <div
-            className={`text-xl font-semibold tabular-nums ${
-              pnl == null ? "" : pnl >= 0 ? "text-emerald-400" : "text-red-400"
-            }`}
-          >
-            {pnl == null || isNaN(pnl) ? "—" : `$${pnl.toFixed(2)}`}
-            {rMultiple != null && !isNaN(rMultiple) && (
-              <span className="ml-2 text-sm text-muted-foreground">
-                ({rMultiple.toFixed(2)}R)
-              </span>
-            )}
+      <div className="grid gap-4 rounded-xl border bg-card/80 p-4 shadow-sm sm:grid-cols-[1fr_180px] sm:p-5">
+        <div className="flex items-center gap-4">
+          <div className="flex size-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <WalletCards className="size-5" />
+          </div>
+          <div>
+            <div className="text-sm text-muted-foreground">Live PnL preview</div>
+            <div
+              className={`mt-1 text-3xl font-semibold tabular-nums ${
+                pnl == null ? "" : pnl >= 0 ? "text-emerald-400" : "text-red-400"
+              }`}
+            >
+              {pnl == null || isNaN(pnl) ? "—" : `$${pnl.toFixed(2)}`}
+              {rMultiple != null && !isNaN(rMultiple) && (
+                <span className="ml-2 align-middle text-sm text-muted-foreground">
+                  {rMultiple.toFixed(2)}R
+                </span>
+              )}
+            </div>
           </div>
         </div>
-        <div className="w-36 space-y-1">
+        <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Override PnL</Label>
           <Input
             type="number"
@@ -265,16 +293,17 @@ export function TradeForm({
       </div>
 
       {/* Optional details */}
-      <Collapsible defaultOpen={!!trade}>
+      <Collapsible defaultOpen={!!trade} className="rounded-xl border bg-card/80 p-4 shadow-sm sm:p-5">
         <CollapsibleTrigger
           render={
             <Button variant="ghost" size="sm" className="text-muted-foreground" />
           }
         >
-          More details ▾
+          <ChevronDown className="size-4" />
+          More details
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-4 pt-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Exit time</Label>
               <Input type="datetime-local" value={exitTime} onChange={(e) => setExitTime(e.target.value)} />
@@ -356,10 +385,12 @@ export function TradeForm({
 
       <div className="flex gap-2">
         <Button onClick={() => save(false)} disabled={saving}>
+          <Save className="size-4" />
           {trade ? "Update trade" : "Save trade"}
         </Button>
         {!trade && (
           <Button variant="secondary" onClick={() => save(true)} disabled={saving}>
+            <Send className="size-4" />
             Save & add another
           </Button>
         )}

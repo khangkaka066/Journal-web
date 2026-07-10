@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Plus, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { computeStats, equityCurve, dailyPnl } from "@/lib/stats";
 import { StatTiles } from "@/components/dashboard/stat-tiles";
 import { EquityCurve } from "@/components/dashboard/equity-curve";
 import { CalendarHeatmap } from "@/components/dashboard/calendar-heatmap";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default async function DashboardPage() {
@@ -28,12 +30,27 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Dashboard</h1>
+      <div className="flex flex-col justify-between gap-4 rounded-xl border bg-card/75 p-5 shadow-sm sm:flex-row sm:items-center">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 rounded-full border bg-background px-2.5 py-1 text-xs text-muted-foreground">
+            <Sparkles className="size-3.5 text-primary" />
+            {all.length} recorded trade{all.length === 1 ? "" : "s"}
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review performance, drawdown, and session rhythm.
+            </p>
+          </div>
+        </div>
+        <Button render={<Link href="/trades/new" />}>
+          <Plus className="size-4" />
+          New trade
+        </Button>
       </div>
 
       {all.length === 0 && (
-        <div className="rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+        <div className="rounded-xl border border-dashed bg-card/60 p-8 text-center text-muted-foreground">
           No trades yet —{" "}
           <Link href="/trades/new" className="underline">
             log your first trade

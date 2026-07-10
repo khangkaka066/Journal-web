@@ -49,30 +49,30 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
+  --background: oklch(0.982 0.006 105);
+  --foreground: oklch(0.16 0.012 260);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.16 0.012 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --popover-foreground: oklch(0.16 0.012 260);
+  --primary: oklch(0.58 0.145 155);
+  --primary-foreground: oklch(0.985 0.004 120);
+  --secondary: oklch(0.944 0.012 240);
+  --secondary-foreground: oklch(0.2 0.016 260);
+  --muted: oklch(0.95 0.01 245);
+  --muted-foreground: oklch(0.48 0.016 255);
+  --accent: oklch(0.92 0.035 165);
+  --accent-foreground: oklch(0.21 0.035 160);
+  --destructive: oklch(0.58 0.22 25);
+  --border: oklch(0.89 0.012 245);
+  --input: oklch(0.89 0.012 245);
+  --ring: oklch(0.65 0.13 155);
+  --chart-1: oklch(0.68 0.16 155);
+  --chart-2: oklch(0.65 0.14 230);
+  --chart-3: oklch(0.7 0.16 70);
+  --chart-4: oklch(0.58 0.16 25);
+  --chart-5: oklch(0.5 0.1 285);
+  --radius: 0.5rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -84,29 +84,29 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --background: oklch(0.145 0.018 260);
+  --foreground: oklch(0.95 0.008 245);
+  --card: oklch(0.19 0.018 255);
+  --card-foreground: oklch(0.95 0.008 245);
+  --popover: oklch(0.19 0.018 255);
+  --popover-foreground: oklch(0.95 0.008 245);
+  --primary: oklch(0.73 0.16 155);
+  --primary-foreground: oklch(0.13 0.025 160);
+  --secondary: oklch(0.25 0.018 255);
+  --secondary-foreground: oklch(0.94 0.008 245);
+  --muted: oklch(0.25 0.018 255);
+  --muted-foreground: oklch(0.72 0.012 250);
+  --accent: oklch(0.27 0.045 160);
+  --accent-foreground: oklch(0.9 0.035 155);
+  --destructive: oklch(0.68 0.18 22);
+  --border: oklch(1 0 0 / 11%);
+  --input: oklch(1 0 0 / 14%);
+  --ring: oklch(0.7 0.14 155);
+  --chart-1: oklch(0.73 0.16 155);
+  --chart-2: oklch(0.7 0.14 230);
+  --chart-3: oklch(0.76 0.15 70);
+  --chart-4: oklch(0.68 0.18 22);
+  --chart-5: oklch(0.66 0.13 285);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -122,7 +122,11 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    background-image:
+      linear-gradient(to bottom, oklch(1 0 0 / 4%), transparent 22rem),
+      radial-gradient(circle at top left, oklch(0.68 0.16 155 / 10%), transparent 22rem);
+    min-height: 100vh;
   }
   html {
     @apply font-sans;
