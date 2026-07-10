@@ -2,7 +2,16 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, FileImage, Save, Send, ShieldAlert, WalletCards } from "lucide-react";
+import {
+  ChevronDown,
+  FileImage,
+  Plus,
+  Save,
+  Send,
+  ShieldAlert,
+  WalletCards,
+  X,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { computePnl, computeRMultiple } from "@/lib/pnl";
 import { deriveSession } from "@/lib/sessions";
@@ -33,6 +42,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { toast } from "sonner";
 
 const DEFAULTS_KEY = "last_trade_defaults";
+const REVIEW_PRESETS_KEY = "trade_review_presets";
 
 interface Defaults {
   instrument_id?: string;
@@ -105,6 +115,75 @@ const RULE_BREAKS = [
   "Held past plan",
 ];
 
+interface ReviewPresets {
+  checklist: Required<TradeChecklist>;
+  mistakeTags: string[];
+  ruleBreaks: string[];
+}
+
+type ChecklistDrafts = Record<keyof TradeChecklist, string>;
+
+const DEFAULT_REVIEW_PRESETS: ReviewPresets = {
+  checklist: {
+    entryModels: CHECKLIST_GROUPS.find((group) => group.key === "entryModels")?.items ?? [],
+    context: CHECKLIST_GROUPS.find((group) => group.key === "context")?.items ?? [],
+    confirmation: CHECKLIST_GROUPS.find((group) => group.key === "confirmation")?.items ?? [],
+    execution: CHECKLIST_GROUPS.find((group) => group.key === "execution")?.items ?? [],
+    review: CHECKLIST_GROUPS.find((group) => group.key === "review")?.items ?? [],
+  },
+  mistakeTags: MISTAKE_TAGS,
+  ruleBreaks: RULE_BREAKS,
+};
+
+function uniqueItems(items: string[]): string[] {
+  return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
+}
+
+function mergeChecklistItems(
+  base: Required<TradeChecklist>,
+  checklist: Required<TradeChecklist>
+): Required<TradeChecklist> {
+  return {
+    entryModels: uniqueItems([...base.entryModels, ...checklist.entryModels]),
+    context: uniqueItems([...base.context, ...checklist.context]),
+    confirmation: uniqueItems([...base.confirmation, ...checklist.confirmation]),
+    execution: uniqueItems([...base.execution, ...checklist.execution]),
+    review: uniqueItems([...base.review, ...checklist.review]),
+  };
+}
+
+function loadReviewPresets(savedChecklist: Required<TradeChecklist>): ReviewPresets {
+  if (typeof window === "undefined") {
+    return {
+      ...DEFAULT_REVIEW_PRESETS,
+      checklist: mergeChecklistItems(DEFAULT_REVIEW_PRESETS.checklist, savedChecklist),
+    };
+  }
+
+  try {
+    const raw = localStorage.getItem(REVIEW_PRESETS_KEY);
+    if (!raw) {
+      return {
+        ...DEFAULT_REVIEW_PRESETS,
+        checklist: mergeChecklistItems(DEFAULT_REVIEW_PRESETS.checklist, savedChecklist),
+      };
+    }
+
+    const stored = JSON.parse(raw) as Partial<ReviewPresets>;
+    const storedChecklist = normalizeChecklist(stored.checklist);
+    return {
+      checklist: mergeChecklistItems(storedChecklist, savedChecklist),
+      mistakeTags: uniqueItems(stored.mistakeTags ?? []),
+      ruleBreaks: uniqueItems(stored.ruleBreaks ?? []),
+    };
+  } catch {
+    return {
+      ...DEFAULT_REVIEW_PRESETS,
+      checklist: mergeChecklistItems(DEFAULT_REVIEW_PRESETS.checklist, savedChecklist),
+    };
+  }
+}
+
 function normalizeChecklist(checklist?: TradeChecklist | null): Required<TradeChecklist> {
   return {
     entryModels: checklist?.entryModels ?? [],
@@ -166,6 +245,18 @@ export function TradeForm({
   const [tradeChecklist, setTradeChecklist] = useState<Required<TradeChecklist>>(
     normalizeChecklist(trade?.trade_checklist)
   );
+  const [reviewPresets, setReviewPresets] = useState<ReviewPresets>(() =>
+    loadReviewPresets(normalizeChecklist(trade?.trade_checklist))
+  );
+  const [newChecklistItems, setNewChecklistItems] = useState<ChecklistDrafts>({
+    entryModels: "",
+    context: "",
+    confirmation: "",
+    execution: "",
+    review: "",
+  });
+  const [newMistakeTag, setNewMistakeTag] = useState("");
+  const [newRuleBreak, setNewRuleBreak] = useState("");
   const [tags, setTags] = useState(trade?.tags?.join(", ") ?? "");
   const [screenshotUrls, setScreenshotUrls] = useState<string[]>(
     trade?.screenshot_urls ?? []
@@ -190,6 +281,10 @@ export function TradeForm({
     return () => cancelAnimationFrame(frame);
   }, [trade]);
 
+  useEffect(() => {
+    localStorage.setItem(REVIEW_PRESETS_KEY, JSON.stringify(reviewPresets));
+  }, [reviewPresets]);
+
   const instrument = instruments.find((i) => i.id === instrumentId);
 
   const autoPnl = useMemo(() => {
@@ -212,13 +307,79 @@ export function TradeForm({
   const rMultiple = pnl != null ? computeRMultiple(pnl, parseFloat(risk) || null) : null;
   const autoSession = entryTime ? deriveSession(new Date(entryTime)) : null;
   const totalChecklistItems = CHECKLIST_GROUPS.reduce(
-    (sum, group) => sum + group.items.length,
+    (sum, group) => sum + reviewPresets.checklist[group.key].length,
     0
   );
   const selectedChecklistItems = CHECKLIST_GROUPS.reduce(
     (sum, group) => sum + tradeChecklist[group.key].length,
     0
   );
+  const checklistProgress = totalChecklistItems
+    ? Math.round((selectedChecklistItems / totalChecklistItems) * 100)
+    : 0;
+
+  function addChecklistItem(group: keyof TradeChecklist) {
+    const item = newChecklistItems[group].trim();
+    if (!item) return;
+
+    setReviewPresets((current) => ({
+      ...current,
+      checklist: {
+        ...current.checklist,
+        [group]: uniqueItems([...current.checklist[group], item]),
+      },
+    }));
+    setTradeChecklist((current) => ({
+      ...current,
+      [group]: uniqueItems([...current[group], item]),
+    }));
+    setNewChecklistItems((current) => ({ ...current, [group]: "" }));
+  }
+
+  function removeChecklistPreset(group: keyof TradeChecklist, item: string) {
+    setReviewPresets((current) => ({
+      ...current,
+      checklist: {
+        ...current.checklist,
+        [group]: current.checklist[group].filter((value) => value !== item),
+      },
+    }));
+    setTradeChecklist((current) => ({
+      ...current,
+      [group]: current[group].filter((value) => value !== item),
+    }));
+  }
+
+  function addReviewPreset(kind: "mistakeTags" | "ruleBreaks", item: string) {
+    const nextItem = item.trim();
+    if (!nextItem) return;
+
+    setReviewPresets((current) => ({
+      ...current,
+      [kind]: uniqueItems([...current[kind], nextItem]),
+    }));
+
+    if (kind === "mistakeTags") {
+      setMistakeTags((current) => uniqueItems([...current, nextItem]));
+      setNewMistakeTag("");
+    } else {
+      setRuleBreaks((current) => uniqueItems([...current, nextItem]));
+      setNewRuleBreak("");
+    }
+  }
+
+  function removeReviewPreset(kind: "mistakeTags" | "ruleBreaks", item: string) {
+    setReviewPresets((current) => ({
+      ...current,
+      [kind]: current[kind].filter((value) => value !== item),
+    }));
+
+    if (kind === "mistakeTags") {
+      setMistakeTags((current) => current.filter((value) => value !== item));
+    } else {
+      setRuleBreaks((current) => current.filter((value) => value !== item));
+    }
+  }
 
   function toggleChecklistItem(group: keyof TradeChecklist, item: string) {
     setTradeChecklist((current) => {
@@ -469,7 +630,7 @@ export function TradeForm({
                 </p>
               </div>
               <div className="rounded-lg bg-muted px-3 py-1.5 text-sm font-medium tabular-nums">
-                {Math.round((selectedChecklistItems / totalChecklistItems) * 100)}%
+                {checklistProgress}%
               </div>
             </div>
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -479,24 +640,60 @@ export function TradeForm({
                     {group.title}
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {group.items.map((item) => {
+                    {reviewPresets.checklist[group.key].map((item) => {
                       const selected = tradeChecklist[group.key].includes(item);
 
                       return (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() => toggleChecklistItem(group.key, item)}
-                          className={`rounded-lg border px-3 py-1.5 text-sm transition ${
-                            selected
-                              ? "border-primary/60 bg-primary/15 text-primary"
-                              : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
-                          }`}
-                        >
-                          {item}
-                        </button>
+                        <span key={item} className="inline-flex overflow-hidden rounded-lg border">
+                          <button
+                            type="button"
+                            onClick={() => toggleChecklistItem(group.key, item)}
+                            className={`px-3 py-1.5 text-sm transition ${
+                              selected
+                                ? "bg-primary/15 text-primary"
+                                : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                            }`}
+                          >
+                            {item}
+                          </button>
+                          <button
+                            type="button"
+                            aria-label={`Remove ${item}`}
+                            onClick={() => removeChecklistPreset(group.key, item)}
+                            className="border-l bg-card px-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+                          >
+                            <X className="size-3.5" />
+                          </button>
+                        </span>
                       );
                     })}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newChecklistItems[group.key]}
+                      onChange={(event) =>
+                        setNewChecklistItems((current) => ({
+                          ...current,
+                          [group.key]: event.target.value,
+                        }))
+                      }
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          addChecklistItem(group.key);
+                        }
+                      }}
+                      placeholder="Add custom item"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      aria-label={`Add ${group.title} item`}
+                      onClick={() => addChecklistItem(group.key)}
+                    >
+                      <Plus className="size-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -571,17 +768,25 @@ export function TradeForm({
             icon={<ShieldAlert className="size-4 text-primary" />}
             title="Mistake tags"
             description="Structured tags make mistake stats reliable."
-            items={MISTAKE_TAGS}
+            items={reviewPresets.mistakeTags}
             selected={mistakeTags}
             onToggle={(item) => toggleString(mistakeTags, item, setMistakeTags)}
+            newItem={newMistakeTag}
+            onNewItemChange={setNewMistakeTag}
+            onAddItem={() => addReviewPreset("mistakeTags", newMistakeTag)}
+            onRemoveItem={(item) => removeReviewPreset("mistakeTags", item)}
           />
           <ReviewChips
             icon={<ShieldAlert className="size-4 text-destructive" />}
             title="Rule breaks"
             description="Mark broken rules to measure their real cost."
-            items={RULE_BREAKS}
+            items={reviewPresets.ruleBreaks}
             selected={ruleBreaks}
             onToggle={(item) => toggleString(ruleBreaks, item, setRuleBreaks)}
+            newItem={newRuleBreak}
+            onNewItemChange={setNewRuleBreak}
+            onAddItem={() => addReviewPreset("ruleBreaks", newRuleBreak)}
+            onRemoveItem={(item) => removeReviewPreset("ruleBreaks", item)}
           />
           <div className="rounded-lg border bg-background/50 p-4">
             <div className="flex items-center gap-2">
@@ -670,6 +875,10 @@ function ReviewChips({
   items,
   selected,
   onToggle,
+  newItem,
+  onNewItemChange,
+  onAddItem,
+  onRemoveItem,
 }: {
   icon: ReactNode;
   title: string;
@@ -677,6 +886,10 @@ function ReviewChips({
   items: string[];
   selected: string[];
   onToggle: (item: string) => void;
+  newItem: string;
+  onNewItemChange: (value: string) => void;
+  onAddItem: () => void;
+  onRemoveItem: (item: string) => void;
 }) {
   return (
     <div className="rounded-lg border bg-background/50 p-4">
@@ -692,20 +905,51 @@ function ReviewChips({
           const active = selected.includes(item);
 
           return (
-            <button
-              key={item}
-              type="button"
-              onClick={() => onToggle(item)}
-              className={`rounded-lg border px-3 py-1.5 text-sm transition ${
-                active
-                  ? "border-primary/60 bg-primary/15 text-primary"
-                  : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              {item}
-            </button>
+            <span key={item} className="inline-flex overflow-hidden rounded-lg border">
+              <button
+                type="button"
+                onClick={() => onToggle(item)}
+                className={`px-3 py-1.5 text-sm transition ${
+                  active
+                    ? "bg-primary/15 text-primary"
+                    : "bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                {item}
+              </button>
+              <button
+                type="button"
+                aria-label={`Remove ${item}`}
+                onClick={() => onRemoveItem(item)}
+                className="border-l bg-card px-1.5 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+              >
+                <X className="size-3.5" />
+              </button>
+            </span>
           );
         })}
+      </div>
+      <div className="mt-3 flex gap-2">
+        <Input
+          value={newItem}
+          onChange={(event) => onNewItemChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              onAddItem();
+            }
+          }}
+          placeholder={`Add custom ${title.toLowerCase()}`}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          aria-label={`Add ${title.toLowerCase()}`}
+          onClick={onAddItem}
+        >
+          <Plus className="size-4" />
+        </Button>
       </div>
     </div>
   );
