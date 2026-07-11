@@ -10,6 +10,7 @@ import {
 } from "@/lib/stats";
 import { LearningInsightsPanel } from "@/components/dashboard/learning-insights";
 import { StatTiles } from "@/components/dashboard/stat-tiles";
+import { AiCoachPanel } from "@/components/ai/ai-coach-panel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -116,6 +117,27 @@ export default async function WeeklyPage() {
           </div>
 
           <StatTiles stats={stats} />
+          <AiCoachPanel
+            title="AI weekly coach"
+            description="Ask OpenRouter to convert this week's journal data into study feedback."
+            actions={[
+              {
+                mode: "weekly_review",
+                title: "Weekly review",
+                description: "Summarize the week, process leak, repeatable behavior, and next rule.",
+              },
+              {
+                mode: "mistake_patterns",
+                title: "Mistake patterns",
+                description: "Cluster repeated mistakes and suggest prevention rules.",
+              },
+              {
+                mode: "study_plan",
+                title: "Study plan",
+                description: "Create a focused practice plan from recent trades.",
+              },
+            ]}
+          />
           <LearningInsightsPanel insights={insights} ruleBreaks={ruleBreaks} />
         </>
       )}

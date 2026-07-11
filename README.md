@@ -2,7 +2,7 @@
 
 A focused trading journal for recording executions, reviewing mistakes, and learning which setups and strategies actually work.
 
-Built with **Next.js**, **Supabase**, **Recharts**, and **Tailwind CSS**.
+Built with **Next.js**, **Supabase**, **OpenRouter**, **Recharts**, and **Tailwind CSS**.
 
 ## Features
 
@@ -13,12 +13,14 @@ Built with **Next.js**, **Supabase**, **Recharts**, and **Tailwind CSS**.
 - Screenshot upload to Supabase Storage
 - Dashboard with equity curve, daily PnL heatmap, setup winrate, strategy wins, mistake patterns, and rule-break cost
 - Weekly review page for current-week performance and next focus
+- AI coach actions through OpenRouter for weekly review, trade debrief, mistake patterns, screenshot review, and study plans
 
 ## Requirements
 
 - Node.js 20+
 - npm
 - A Supabase project
+- An OpenRouter API key for AI coach features
 - A Vercel account for deployment
 
 ## Local Setup
@@ -40,9 +42,12 @@ cp .env.local.example .env.local
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-publishable-or-anon-key
+OPENROUTER_API_KEY=your-openrouter-api-key
+OPENROUTER_MODEL=openai/gpt-4o-mini
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-You can find these values in Supabase under **Project Settings > API**.
+You can find Supabase values under **Project Settings > API**. Create the OpenRouter key in your OpenRouter dashboard.
 
 4. Run the app:
 
@@ -64,6 +69,7 @@ Open **Supabase SQL Editor** and run the migration files in order:
 supabase/migrations/0001_init.sql
 supabase/migrations/0002_trade_checklist.sql
 supabase/migrations/0003_mistake_rules.sql
+supabase/migrations/0004_review_presets.sql
 ```
 
 The migrations create:
@@ -75,6 +81,7 @@ The migrations create:
 - default instruments: `NQ`, `ES`, `MNQ`, `MES`, `SPY`, `QQQ`
 - private `screenshots` storage bucket
 - structured checklist, mistake tag, and rule-break fields
+- synced review presets for checklist and tag customization
 
 ## Auth Setup
 
@@ -113,6 +120,9 @@ Do not type `Next.js default` into Output Directory. Leave it blank.
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-publishable-or-anon-key
+OPENROUTER_API_KEY=your-openrouter-api-key
+OPENROUTER_MODEL=openai/gpt-4o-mini
+NEXT_PUBLIC_SITE_URL=https://your-vercel-domain.vercel.app
 ```
 
 5. Deploy.

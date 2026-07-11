@@ -3,6 +3,7 @@ import { PencilLine } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { TradeForm } from "@/components/trades/trade-form";
 import { ScreenshotGallery, type ScreenshotView } from "@/components/trades/screenshot-gallery";
+import { AiCoachPanel } from "@/components/ai/ai-coach-panel";
 
 export default async function EditTradePage({
   params,
@@ -47,6 +48,26 @@ export default async function EditTradePage({
         </p>
       </div>
       <ScreenshotGallery screenshots={screenshots} />
+      <AiCoachPanel
+        title="AI trade coach"
+        description="Use OpenRouter to debrief this trade and review attached chart screenshots."
+        actions={[
+          {
+            mode: "trade_debrief",
+            title: "Trade debrief",
+            description: "Review thesis, execution, rules, and one lesson.",
+            tradeId: trade.id,
+          },
+          {
+            mode: "screenshot_review",
+            title: "Screenshot review",
+            description: screenshots.length
+              ? "Review chart context from uploaded screenshots."
+              : "Attach screenshots first for visual review.",
+            tradeId: trade.id,
+          },
+        ]}
+      />
       <TradeForm instruments={instruments ?? []} trade={trade} reviewPreset={reviewPreset} />
     </div>
   );
