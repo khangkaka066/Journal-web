@@ -271,7 +271,93 @@ R13 Mọi dự báo phải ở dạng if-then theo mức giá (wall, gap, flip) 
     (gamma/vanna/charm/OI), và được chấm điểm ở phiên kế tiếp.
 ```
 
-## 17. Schema dữ liệu crawl (mapping cho AI đọc file)
+## 17. Key levels từ mô hình dealer positioning (Call Resistance, Put Support, HVL, Gamma Wall, GEX levels)
+
+Ngoài snapshot chain thô, input hằng ngày còn gồm bộ mức tính sẵn từ mô hình gamma (kiểu SpotGamma/MenthorQ). Định nghĩa và cách dùng từng mức:
+
+| Mức | Định nghĩa | Cách dùng |
+|---|---|---|
+| **Call Resistance** | Strike có call gamma/OI ròng lớn nhất phía trên spot, tính trên **toàn bộ kỳ hạn** | Kháng cự cơ học chính của khung nhiều ngày. Nếu nằm rất xa spot (vd 800 khi spot ~722) → chỉ là mốc OI dài hạn/strike tròn, **không dùng làm kháng cự giao dịch trong ngày** — dùng các mức 0DTE/GEX gần hơn |
+| **Put Support** | Strike có put gamma/OI ròng lớn nhất phía dưới spot, toàn bộ kỳ hạn | Hỗ trợ cơ học chính. Thủng hẳn mức này thường mở vùng trượt nhanh (khoảng trống OI + dealer bán hedge) |
+| **HVL** (High Volatility Level) | Chính là **gamma flip level** — mức giá mà GEX tổng đổi dấu | Trên HVL = chế độ gamma dương (nén biến động, mean-reversion, pin). Dưới HVL = gamma âm (khuếch đại, trend mạnh, dễ trượt). Đây là mức quan trọng nhất để chọn **chế độ giao dịch** |
+| **Call Resistance 0DTE / Put Support 0DTE / HVL 0DTE** | Cùng định nghĩa nhưng chỉ tính trên OI+volume đáo hạn hôm nay | Chỉ có giá trị **trong phiên hôm đó**, hết hiệu lực sau đóng cửa. Thường sát spot hơn và đáng tin hơn cho scalp/intraday |
+| **Gamma Wall 0DTE** | Strike có gamma 0DTE tuyệt đối lớn nhất | Nam châm/pin trong ngày; giá hay dao động quanh mức này khi gamma dương. Trùng Call Resistance 0DTE là tín hiệu trần intraday cứng |
+| **GEX 1…GEX 10** | 10 strike xếp hạng theo độ lớn gamma exposure tuyệt đối (GEX 1 lớn nhất) | Là các mức hỗ trợ/kháng cự trung gian. Cụm GEX dày sát nhau → vùng pin; khoảng trống giữa hai GEX liền kề → giá đi nhanh qua vùng đó. GEX 1–3 có trọng số cao nhất |
+| **1D Min / 1D Max** | Biên độ kỳ vọng 1 phiên do mô hình định giá (từ IV/straddle) | Vùng dao động dự kiến hôm nay. Giá chạm mà không có catalyst → xác suất mean-reversion cao; vượt kèm catalyst → chấp nhận trend |
+
+Nguyên tắc phối hợp với flow chain (mục 3–6):
+1. Các mức này là **output của cùng cơ chế** wall/GEX mô tả ở mục 6 — không mâu thuẫn, chỉ là bản tính sẵn. Nếu key levels mâu thuẫn với wall tự tính từ OI chain, ưu tiên kiểm chứng bằng hành vi giá thực tế quanh mức.
+2. Thứ tự đọc: (a) spot so với HVL → chọn chế độ; (b) khung intraday dùng bộ 0DTE + GEX gần spot; (c) khung swing dùng Call Resistance / Put Support toàn kỳ hạn; (d) 1D Min/Max làm biên kỳ vọng và mốc chốt lời.
+3. Các mức 0DTE **dịch chuyển trong phiên** (đặc biệt ngày FOMC/CPI) — snapshot sáng mất giá trị dần, đánh giá lại nếu có dữ liệu mới.
+
+**Ví dụ đọc bộ số thực (QQQ)**: Call Resistance 800, Put Support 715, HVL 721, 1D Min 712.19, 1D Max 735.97, Call Resistance 0DTE 725, Put Support 0DTE 715, HVL 0DTE 727, Gamma Wall 0DTE 725, GEX 1 730, GEX 2 735, GEX 3 726.
+- Call Resistance 800 quá xa → bỏ qua cho intraday; kháng cự thực tế là cụm 725–726–727 (Gamma Wall + CR 0DTE + GEX 3 + HVL 0DTE) rồi 730 (GEX 1), 733–735 (GEX 4, GEX 2).
+- Put Support 715 trùng Put Support 0DTE 715 → hỗ trợ kép, mức phòng thủ chính.
+- Spot trên HVL 721 → gamma dương, thiên về pin/mean-reversion trong range 715–725; spot dưới 721 → chuyển chế độ khuếch đại, mục tiêu 712 (1D Min) rồi 710–711 (GEX 7, GEX 8).
+- Vượt và giữ trên cụm 725–727 → khoảng trống tới 730, rồi 733–735 ≈ 1D Max — vùng chốt lời tự nhiên.
+
+## 18. Bộ luật if-then cho key levels (R14–R22)
+
+```
+R14 IF spot > HVL THEN chế_độ = GAMMA_DƯƠNG (ưu tiên mean-reversion, fade biên,
+    tin pin quanh Gamma Wall); IF spot < HVL THEN chế_độ = GAMMA_ÂM (ưu tiên
+    breakout/trend, không fade, stop rộng hơn hoặc giảm size).
+
+R15 IF Call Resistance (toàn kỳ hạn) cách spot > 5% THEN không dùng nó cho
+    intraday; thay bằng Call Resistance 0DTE và GEX gần nhất phía trên.
+
+R16 IF Gamma Wall 0DTE trùng (±0.1%) Call Resistance 0DTE hoặc một GEX top-3
+    THEN coi đó là trần/nam châm intraday mạnh; kịch bản chính = giá bị hút về
+    và bị chặn tại đó khi gamma dương.
+
+R17 IF Put Support trùng Put Support 0DTE THEN hỗ trợ kép — mức invalidation
+    chính cho bias tăng trong ngày; thủng dứt khoát (đóng nến dưới, không phải
+    quét râu) → đổi bias, mục tiêu GEX/1D Min kế tiếp phía dưới.
+
+R18 IF giá tiến vào vùng giữa hai mức GEX liền kề cách nhau rộng (khoảng trống)
+    THEN kỳ vọng di chuyển nhanh đến mức GEX kế tiếp (tương tự R5).
+
+R19 IF giá chạm 1D Min hoặc 1D Max mà KHÔNG có catalyst mới
+    THEN xác suất mean-reversion cao — vùng chốt lời/counter-trade, không phải
+    vùng đuổi lệnh. IF có catalyst (tin, FOMC) THEN biên này vô hiệu.
+
+R20 Bias intraday hợp lệ chỉ khi ĐỒNG THUẬN: (a) vị trí spot vs HVL,
+    (b) hướng flow chủ động 0DTE (P/C volume, ask/bid side), (c) cấu trúc mức
+    (gần hỗ trợ hay kháng cự). 2/3 đồng thuận = bias thường; 3/3 = bias mạnh;
+    <2 = đứng ngoài hoặc chỉ scalp hai chiều theo mức.
+
+R21 IF spot kẹt giữa Put Support 0DTE và cụm Gamma Wall/CR 0DTE, gamma dương
+    THEN kịch bản chính = range trade giữa hai mức; entry sát mức, stop ngay
+    ngoài mức, target mức đối diện.
+
+R22 Mỗi kế hoạch phải ghi rõ mức nào đến từ 0DTE (hết hiệu lực cuối phiên)
+    và mức nào toàn kỳ hạn (giữ được nhiều phiên).
+```
+
+## 19. Template output kế hoạch giao dịch (bắt buộc cho AI)
+
+Khi nhận input = snapshot option flow + bộ key levels, AI phải trả kế hoạch theo đúng khung sau, mọi mệnh đề đều kèm cơ chế (gamma/wall/flow), không cảm tính:
+
+```
+1. CHẾ ĐỘ THỊ TRƯỜNG: spot vs HVL (và HVL 0DTE) → gamma dương/âm; hệ quả
+   (pin/mean-reversion hay trend/khuếch đại).
+2. BẢN ĐỒ MỨC (sắp theo giá, đánh dấu 0DTE vs toàn kỳ hạn):
+   kháng cự: ... | hỗ trợ: ... | vùng pin: ... | khoảng trống: ...
+3. BIAS: bullish/bearish/neutral + độ tin cậy (theo R20: x/3 điều kiện đồng thuận)
+   + dẫn chứng flow (P/C, strike hút volume, ask/bid side, unusual đã lọc nhiễu).
+4. KỊCH BẢN IF-THEN (tối thiểu 3):
+   - Kịch bản chính: điều kiện giá → hành động → target → stop.
+   - Kịch bản ngược: mức invalidation → hành động.
+   - Kịch bản range/đứng ngoài.
+5. RỦI RO & SỰ KIỆN: lịch vĩ mô/earnings hôm nay (R10), OPEX (R11),
+   giới hạn dữ liệu (OI trễ 1 phiên, mức 0DTE dịch trong phiên).
+6. CHẤM ĐIỂM PHIÊN TRƯỚC: kế hoạch hôm qua đúng/sai ở mệnh đề nào, vì cơ chế
+   hay vì tin ngoài mô hình (nếu có dữ liệu).
+```
+
+Quy tắc trình bày: mọi mức giá phải là con số cụ thể lấy từ input; không đưa khuyến nghị size/đòn bẩy tuyệt đối (chỉ tương đối: "giảm size khi gamma âm"); nêu rõ đây là phân tích cơ học, không phải khuyến nghị đầu tư.
+
+## 20. Schema dữ liệu crawl (mapping cho AI đọc file)
 
 Dữ liệu nguồn: Cboe delayed quotes (trễ 15 phút), snapshot 20:00 giờ VN, lưu tại `data/options/<YYYY-MM-DD>/`.
 
@@ -288,7 +374,7 @@ Dữ liệu nguồn: Cboe delayed quotes (trễ 15 phút), snapshot 20:00 giờ 
 
 Giới hạn đã biết: (1) không có time & sales từng lệnh kèm aggressor → không phân biệt sweep/block trực tiếp; (2) OI trễ một phiên; (3) GEX phải tự tính. Nâng cấp gợi ý: lưu chuỗi snapshot và tính delta-OI ngày-qua-ngày theo strike (phát hiện mở mới/roll); khi nghiêm túc hơn, thuê feed flow realtime có điều kiện khớp lệnh (CBOE LiveVol, Unusual Whales, FlowAlgo, OPRA).
 
-## 18. Từ điển thuật ngữ (glossary)
+## 21. Từ điển thuật ngữ (glossary)
 
 | Thuật ngữ | Nghĩa |
 |---|---|
@@ -299,6 +385,11 @@ Giới hạn đã biết: (1) không có time & sales từng lệnh kèm aggress
 | Collar | Mua put + bán call để bảo hiểm vị thế cổ phiếu với chi phí thấp |
 | Expected move | Biên độ thị trường định giá cho một sự kiện ≈ straddle ATM ÷ spot |
 | Gamma flip | Mức giá mà GEX đổi dấu từ dương sang âm |
+| Gamma Wall | Strike có gamma tuyệt đối lớn nhất — nam châm/pin (bản 0DTE chỉ hiệu lực trong phiên) |
+| GEX 1–10 | 10 strike xếp hạng theo độ lớn gamma exposure — các mức S/R trung gian, GEX 1 mạnh nhất |
+| HVL | High Volatility Level — tên khác của gamma flip level; trên = gamma dương, dưới = gamma âm |
+| Call Resistance / Put Support | Strike call/put gamma ròng lớn nhất trên/dưới spot — kháng cự/hỗ trợ chính của mô hình |
+| 1D Min / 1D Max | Biên độ kỳ vọng 1 phiên từ IV — vùng mean-reversion khi không có catalyst |
 | GEX | Gamma exposure ước tính của dealer, quyết định chế độ nén/khuếch đại biến động |
 | IV crush | IV sụp ngay sau sự kiện |
 | IV rank/percentile | IV hiện tại so với range lịch sử của chính tài sản |
