@@ -91,33 +91,35 @@ export async function buildOptionFlowAiPlan(
 
   const content = await askOpenRouter({
     model,
-    maxTokens: 2200,
+    maxTokens: 900,
     messages: [
       {
         role: "system",
         content:
-          "You are an options-flow trading coach. Create educational, conditional if-then trading plans only. Do not promise profits, do not give certainty, and do not tell the user to buy or sell immediately. Always include invalidation and risk controls.",
+          "You are an options-flow trading coach. Write short English Markdown only. Focus on the most important levels and conditional planning. Do not give financial advice or certainty.",
       },
       {
         role: "user",
-        content: `Use the knowledge base, yesterday's option chain snapshot, and the QQQ levels to create a detailed trading plan for today's session.
+        content: `Use the knowledge base, yesterday's option chain snapshot, and the user-provided QQQ levels to identify only the most important levels and a short trading plan.
 
-Output in concise Vietnamese Markdown with these sections:
-1. Market Context
-2. Key Levels
-3. Main Scenario
-4. Bullish Plan
-5. Bearish Plan
-6. Chop / No Trade Conditions
-7. Risk Controls
-8. What To Journal After The Session
+Output in English Markdown only.
+Keep the whole answer under 450 words.
+Use exactly these sections:
+## Key Levels
+## Market Bias
+## If-Then Plan
+## Invalidation / Risk
 
 Rules:
+- Do not write a long essay.
+- Do not include journaling questions.
+- Do not list every GEX level. Group nearby levels into zones.
+- Prioritize 3-6 key levels/zones maximum.
 - Every trade idea must be conditional if-then.
 - Use the supplied current price and levels: call resistance, put support, HVL, 1D min/max, 0DTE walls, gamma wall, and GEX ladder.
 - Compare the levels with the CBOE snapshot values.
-- Explain the mechanism using OI, put/call ratio, premium, gamma wall, pinning, 0DTE, vanna/charm only when supported by data.
-- Mention that this is educational planning, not financial advice.
+- Explain only the strongest mechanism using OI, put/call ratio, premium, gamma wall, pinning, or 0DTE when supported by data.
+- Mention "Educational planning only" once at the end.
 
 KNOWLEDGE BASE:
 ${knowledge}
