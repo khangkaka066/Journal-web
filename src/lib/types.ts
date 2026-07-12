@@ -66,3 +66,13 @@ export interface ReviewPresetRecord {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface AiReview {
+  id: string;
+  user_id: string;
+  trade_id: string | null;
+  mode: string;
+  title: string;
+  content: string;
+  created_at: string;
+}

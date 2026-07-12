@@ -1,4 +1,5 @@
 import type { TradeChecklist } from "@/lib/types";
+import { normalizeTags } from "@/lib/tags";
 
 export const REVIEW_PRESETS_KEY = "trade_review_presets";
 
@@ -135,7 +136,7 @@ export function parseReviewPresets(
 
   return {
     checklist: normalizeChecklist(value.checklist),
-    mistakeTags: uniqueItems(value.mistakeTags ?? []),
-    ruleBreaks: uniqueItems(value.ruleBreaks ?? []),
+    mistakeTags: normalizeTags(value.mistakeTags ?? []),
+    ruleBreaks: normalizeTags(value.ruleBreaks ?? []),
   };
 }

@@ -11,6 +11,7 @@ import {
   parseReviewPresets,
   uniqueItems,
 } from "@/lib/review-presets";
+import { normalizeTag, normalizeTags } from "@/lib/tags";
 import type { ReviewPresetRecord, TradeChecklist } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -69,12 +70,12 @@ export function ReviewPresetsForm({
   }
 
   function addTag(kind: "mistakeTags" | "ruleBreaks", value: string) {
-    const item = value.trim();
+    const item = normalizeTag(value);
     if (!item) return;
 
     setPresets((current) => ({
       ...current,
-      [kind]: uniqueItems([...current[kind], item]),
+      [kind]: normalizeTags([...current[kind], item]),
     }));
     if (kind === "mistakeTags") setMistakeDraft("");
     else setRuleDraft("");
@@ -92,8 +93,8 @@ export function ReviewPresetsForm({
     const { error } = await createClient().from("review_presets").upsert({
       user_id: userId,
       checklist: presets.checklist,
-      mistake_tags: presets.mistakeTags,
-      rule_breaks: presets.ruleBreaks,
+      mistake_tags: normalizeTags(presets.mistakeTags),
+      rule_breaks: normalizeTags(presets.ruleBreaks),
       updated_at: new Date().toISOString(),
     });
     setSaving(false);

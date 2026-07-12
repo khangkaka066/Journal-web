@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { TradeForm } from "@/components/trades/trade-form";
+import { processAlerts } from "@/lib/stats";
 import { BadgePlus } from "lucide-react";
 
 export default async function NewTradePage() {
@@ -7,10 +8,14 @@ export default async function NewTradePage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [{ data: instruments }, { data: reviewPreset }] = await Promise.all([
+  const [{ data: instruments }, { data: reviewPreset }, { data: trades }] = await Promise.all([
     supabase.from("instruments").select("*").order("symbol"),
     supabase.from("review_presets").select("*").eq("user_id", user!.id).maybeSingle(),
+    supabase
+      .from("trades")
+      .select("pnl, entry_time, exit_time, mistakes, mistake_tags, rule_breaks"),
   ]);
+  const alerts = processAlerts(trades ?? []);
 
   return (
     <div className="space-y-6">
@@ -24,7 +29,7 @@ export default async function NewTradePage() {
           Required fields first, optional review notes when the session cools down.
         </p>
       </div>
-      <TradeForm instruments={instruments ?? []} reviewPreset={reviewPreset} />
+      <TradeForm instruments={instruments ?? []} reviewPreset={reviewPreset} processAlerts={alerts} />
     </div>
   );
 }

@@ -11,6 +11,7 @@ import {
 import { LearningInsightsPanel } from "@/components/dashboard/learning-insights";
 import { StatTiles } from "@/components/dashboard/stat-tiles";
 import { AiCoachPanel } from "@/components/ai/ai-coach-panel";
+import { SavedAiReviews } from "@/components/ai/saved-ai-reviews";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -20,7 +21,7 @@ export default async function WeeklyPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: trades }, { data: profile }] = await Promise.all([
+  const [{ data: trades }, { data: profile }, { data: aiReviews }] = await Promise.all([
     supabase
       .from("trades")
       .select(
@@ -28,6 +29,13 @@ export default async function WeeklyPage() {
       )
       .order("entry_time", { ascending: true }),
     supabase.from("profiles").select("timezone").eq("id", user!.id).single(),
+    supabase
+      .from("ai_reviews")
+      .select("*")
+      .eq("user_id", user!.id)
+      .is("trade_id", null)
+      .order("created_at", { ascending: false })
+      .limit(5),
   ]);
 
   const tz = profile?.timezone ?? "UTC";
@@ -138,6 +146,7 @@ export default async function WeeklyPage() {
               },
             ]}
           />
+          <SavedAiReviews reviews={aiReviews ?? []} />
           <LearningInsightsPanel insights={insights} ruleBreaks={ruleBreaks} />
         </>
       )}

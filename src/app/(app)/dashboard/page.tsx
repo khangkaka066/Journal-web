@@ -19,6 +19,7 @@ import {
   DashboardFiltersPanel,
   type DashboardFilters,
 } from "@/components/dashboard/dashboard-filters";
+import { normalizeTag, normalizeTags } from "@/lib/tags";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -32,7 +33,7 @@ function cleanOptions(values: Array<string | null | undefined>): string[] {
 }
 
 function tagOptions(trades: StatsTrade[], key: "mistake_tags" | "rule_breaks"): string[] {
-  return cleanOptions(trades.flatMap((trade) => trade[key] ?? []));
+  return normalizeTags(trades.flatMap((trade) => trade[key] ?? []));
 }
 
 function filterTrades(trades: StatsTrade[], filters: DashboardFilters): StatsTrade[] {
@@ -47,8 +48,8 @@ function filterTrades(trades: StatsTrade[], filters: DashboardFilters): StatsTra
     if (filters.session && trade.session !== filters.session) return false;
     if (filters.setup && trade.setup !== filters.setup) return false;
     if (filters.strategy && trade.strategy !== filters.strategy) return false;
-    if (filters.mistake && !(trade.mistake_tags ?? []).includes(filters.mistake)) return false;
-    if (filters.rule && !(trade.rule_breaks ?? []).includes(filters.rule)) return false;
+    if (filters.mistake && !normalizeTags(trade.mistake_tags ?? []).includes(normalizeTag(filters.mistake) ?? "")) return false;
+    if (filters.rule && !normalizeTags(trade.rule_breaks ?? []).includes(normalizeTag(filters.rule) ?? "")) return false;
     return true;
   });
 }

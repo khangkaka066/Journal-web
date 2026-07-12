@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { Bot, Brain, Camera, GraduationCap, Loader2, MessageSquareText, Sparkles } from "lucide-react";
+import { Bot, Brain, Camera, GraduationCap, Loader2, MessageSquareText, Save, Sparkles } from "lucide-react";
 import type { AiCoachMode } from "@/lib/ai/prompts";
 import { AI_SETTINGS_KEYS } from "@/components/ai/ai-settings-form";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface AiAction {
@@ -33,11 +34,14 @@ export function AiCoachPanel({
 }) {
   const [activeMode, setActiveMode] = useState<AiCoachMode | null>(null);
   const [output, setOutput] = useState("");
+  const [outputAction, setOutputAction] = useState<AiAction | null>(null);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   async function run(action: AiAction) {
     setActiveMode(action.mode);
     setOutput("");
+    setOutputAction(null);
     setError("");
 
     const response = await fetch("/api/ai/coach", {
@@ -63,6 +67,35 @@ export function AiCoachPanel({
     }
 
     setOutput(payload.output ?? "");
+    setOutputAction(action);
+  }
+
+  async function saveReview() {
+    if (!output || !outputAction) return;
+
+    setSaving(true);
+    const response = await fetch("/api/ai/reviews", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tradeId: outputAction.tradeId,
+        mode: outputAction.mode,
+        title: outputAction.title,
+        content: output,
+      }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    setSaving(false);
+
+    if (!response.ok) {
+      setError(payload.error ?? "Could not save AI review");
+      return;
+    }
+
+    setError("");
+    setOutput("");
+    setOutputAction(null);
+    window.location.reload();
   }
 
   return (
@@ -105,8 +138,14 @@ export function AiCoachPanel({
 
         {output && (
           <div className="rounded-lg border bg-background/70 p-4">
-            <div className="mb-2 text-xs font-medium uppercase text-muted-foreground">
-              AI output
+            <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+              <div className="text-xs font-medium uppercase text-muted-foreground">
+                AI output
+              </div>
+              <Button size="sm" onClick={saveReview} disabled={saving}>
+                {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+                Save review
+              </Button>
             </div>
             <div className="whitespace-pre-wrap text-sm leading-6">{output}</div>
           </div>

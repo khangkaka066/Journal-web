@@ -15,6 +15,8 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { computePnl, computeRMultiple } from "@/lib/pnl";
 import { deriveSession } from "@/lib/sessions";
+import { normalizeTag, normalizeTags, parseTagInput } from "@/lib/tags";
+import type { ProcessAlert } from "@/lib/stats";
 import type {
   Direction,
   Instrument,
@@ -106,10 +108,12 @@ export function TradeForm({
   instruments,
   trade,
   reviewPreset,
+  processAlerts = [],
 }: {
   instruments: Instrument[];
   trade?: Trade;
   reviewPreset?: ReviewPresetRecord | null;
+  processAlerts?: ProcessAlert[];
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
@@ -137,8 +141,8 @@ export function TradeForm({
   const [emotionBefore, setEmotionBefore] = useState(trade?.emotion_before ?? "");
   const [emotionAfter, setEmotionAfter] = useState(trade?.emotion_after ?? "");
   const [mistakes, setMistakes] = useState(trade?.mistakes ?? "");
-  const [mistakeTags, setMistakeTags] = useState<string[]>(trade?.mistake_tags ?? []);
-  const [ruleBreaks, setRuleBreaks] = useState<string[]>(trade?.rule_breaks ?? []);
+  const [mistakeTags, setMistakeTags] = useState<string[]>(normalizeTags(trade?.mistake_tags ?? []));
+  const [ruleBreaks, setRuleBreaks] = useState<string[]>(normalizeTags(trade?.rule_breaks ?? []));
   const [lessons, setLessons] = useState(trade?.lessons ?? "");
   const [tradeChecklist, setTradeChecklist] = useState<Required<TradeChecklist>>(
     normalizeChecklist(trade?.trade_checklist)
@@ -238,6 +242,11 @@ export function TradeForm({
   const checklistProgress = totalChecklistItems
     ? Math.round((selectedChecklistItems / totalChecklistItems) * 100)
     : 0;
+  const selectedProcessAlerts = processAlerts.filter((alert) =>
+    alert.source === "Mistake"
+      ? mistakeTags.includes(alert.name)
+      : ruleBreaks.includes(alert.name)
+  );
 
   function addChecklistItem(group: keyof TradeChecklist) {
     const item = newChecklistItems[group].trim();
@@ -272,7 +281,7 @@ export function TradeForm({
   }
 
   function addReviewPreset(kind: "mistakeTags" | "ruleBreaks", item: string) {
-    const nextItem = item.trim();
+    const nextItem = normalizeTag(item);
     if (!nextItem) return;
 
     setReviewPresets((current) => ({
@@ -314,7 +323,9 @@ export function TradeForm({
   }
 
   function toggleString(list: string[], item: string, setList: (value: string[]) => void) {
-    setList(list.includes(item) ? list.filter((value) => value !== item) : [...list, item]);
+    const nextItem = normalizeTag(item);
+    if (!nextItem) return;
+    setList(list.includes(nextItem) ? list.filter((value) => value !== nextItem) : normalizeTags([...list, nextItem]));
   }
 
   async function uploadScreenshots(): Promise<string[] | null> {
@@ -380,11 +391,11 @@ export function TradeForm({
       emotion_before: emotionBefore || null,
       emotion_after: emotionAfter || null,
       mistakes: mistakes || null,
-      mistake_tags: mistakeTags,
-      rule_breaks: ruleBreaks,
+      mistake_tags: normalizeTags(mistakeTags),
+      rule_breaks: normalizeTags(ruleBreaks),
       lessons: lessons || null,
       trade_checklist: tradeChecklist,
-      tags: tags ? tags.split(",").map((t) => t.trim()).filter(Boolean) : [],
+      tags: parseTagInput(tags),
       screenshot_urls: nextScreenshotUrls,
       notes: notes || null,
     };
@@ -709,6 +720,26 @@ export function TradeForm({
             onAddItem={() => addReviewPreset("ruleBreaks", newRuleBreak)}
             onRemoveItem={(item) => removeReviewPreset("ruleBreaks", item)}
           />
+          {selectedProcessAlerts.length > 0 && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+              <div className="flex items-center gap-2 font-medium text-destructive">
+                <ShieldAlert className="size-4" />
+                Process alerts
+              </div>
+              <div className="mt-3 grid gap-2">
+                {selectedProcessAlerts.slice(0, 4).map((alert) => (
+                  <div key={`${alert.source}-${alert.name}`} className="rounded-lg border bg-background/70 p-3 text-sm">
+                    <div className="font-medium">
+                      {alert.name} has cost ${Math.abs(alert.totalPnl).toFixed(2)} across {alert.count} trade{alert.count === 1 ? "" : "s"}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {alert.source} · {alert.lossCount} loss{alert.lossCount === 1 ? "" : "es"} · avg ${alert.avgPnl.toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="rounded-lg border bg-background/50 p-4">
             <div className="flex items-center gap-2">
               <FileImage className="size-4 text-primary" />

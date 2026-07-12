@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { TradeForm } from "@/components/trades/trade-form";
 import { ScreenshotGallery, type ScreenshotView } from "@/components/trades/screenshot-gallery";
 import { AiCoachPanel } from "@/components/ai/ai-coach-panel";
+import { SavedAiReviews } from "@/components/ai/saved-ai-reviews";
+import { processAlerts } from "@/lib/stats";
 
 export default async function EditTradePage({
   params,
@@ -15,10 +17,25 @@ export default async function EditTradePage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [{ data: trade }, { data: instruments }, { data: reviewPreset }] = await Promise.all([
+  const [
+    { data: trade },
+    { data: instruments },
+    { data: reviewPreset },
+    { data: aiReviews },
+    { data: history },
+  ] = await Promise.all([
     supabase.from("trades").select("*").eq("id", id).single(),
     supabase.from("instruments").select("*").order("symbol"),
     supabase.from("review_presets").select("*").eq("user_id", user!.id).maybeSingle(),
+    supabase
+      .from("ai_reviews")
+      .select("*")
+      .eq("user_id", user!.id)
+      .eq("trade_id", id)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("trades")
+      .select("pnl, entry_time, exit_time, mistakes, mistake_tags, rule_breaks"),
   ]);
 
   if (!trade) notFound();
@@ -68,7 +85,13 @@ export default async function EditTradePage({
           },
         ]}
       />
-      <TradeForm instruments={instruments ?? []} trade={trade} reviewPreset={reviewPreset} />
+      <SavedAiReviews reviews={aiReviews ?? []} />
+      <TradeForm
+        instruments={instruments ?? []}
+        trade={trade}
+        reviewPreset={reviewPreset}
+        processAlerts={processAlerts(history ?? [])}
+      />
     </div>
   );
 }

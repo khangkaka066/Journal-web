@@ -164,7 +164,7 @@ describe("learningInsights", () => {
   it("extracts repeated mistakes from comma/newline separated text", () => {
     const insights = learningInsights(trades);
     expect(insights.mistakeInsights[0]).toMatchObject({
-      name: "chased",
+      name: "Chased Entry",
       count: 2,
       lossCount: 1,
       totalPnl: 50,
@@ -181,7 +181,7 @@ describe("learningInsights", () => {
         mistake_tags: ["Moved stop"],
       },
     ]);
-    expect(insights.mistakeInsights[0].name).toBe("Moved stop");
+    expect(insights.mistakeInsights[0].name).toBe("Moved Stop");
   });
 
   it("summarizes rule breaker cost", () => {
@@ -200,7 +200,7 @@ describe("learningInsights", () => {
       },
     ]);
     expect(rules[0]).toMatchObject({
-      name: "No invalidation",
+      name: "No Invalidation",
       count: 2,
       lossCount: 1,
       totalPnl: -50,
@@ -231,7 +231,7 @@ describe("learningInsights", () => {
     ]);
 
     expect(stopDoing[0]).toMatchObject({
-      name: "No invalidation",
+      name: "No Invalidation",
       source: "Rule",
       totalPnl: -120,
     });

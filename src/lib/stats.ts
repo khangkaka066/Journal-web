@@ -1,4 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
+import { normalizeTag } from "@/lib/tags";
 
 export interface StatsTrade {
   pnl: number;
@@ -194,6 +195,15 @@ export interface StopDoingInsight {
   avgPnl: number;
 }
 
+export interface ProcessAlert {
+  name: string;
+  source: "Mistake" | "Rule";
+  count: number;
+  lossCount: number;
+  totalPnl: number;
+  avgPnl: number;
+}
+
 function cleanLabel(value: string | null | undefined): string | null {
   const cleaned = value?.trim().replace(/\s+/g, " ");
   return cleaned || null;
@@ -240,7 +250,7 @@ function groupPerformance(
 function mistakeLabels(value: string | null | undefined): string[] {
   return (value ?? "")
     .split(/[,;\n]/)
-    .map((part) => cleanLabel(part))
+    .map((part) => normalizeTag(part))
     .filter((part): part is string => Boolean(part));
 }
 
@@ -253,7 +263,9 @@ export function learningInsights(trades: StatsTrade[]): LearningInsights {
       : mistakeLabels(trade.mistakes);
 
     for (const mistake of mistakes) {
-      mistakeGroups.set(mistake, [...(mistakeGroups.get(mistake) ?? []), trade]);
+      const label = normalizeTag(mistake);
+      if (!label) continue;
+      mistakeGroups.set(label, [...(mistakeGroups.get(label) ?? []), trade]);
     }
   }
 
@@ -293,7 +305,7 @@ export function ruleBreakInsights(trades: StatsTrade[]): RuleBreakInsight[] {
 
   for (const trade of trades) {
     for (const rule of trade.rule_breaks ?? []) {
-      const label = cleanLabel(rule);
+      const label = normalizeTag(rule);
       if (!label) continue;
       groups.set(label, [...(groups.get(label) ?? []), trade]);
     }
@@ -332,7 +344,7 @@ export function stopDoingInsights(trades: StatsTrade[]): StopDoingInsight[] {
       : mistakeLabels(trade.mistakes);
 
     for (const mistake of mistakes) {
-      const label = cleanLabel(mistake);
+      const label = normalizeTag(mistake);
       if (!label) continue;
       const key = `Mistake:${label}`;
       groups.set(key, {
@@ -342,7 +354,7 @@ export function stopDoingInsights(trades: StatsTrade[]): StopDoingInsight[] {
     }
 
     for (const rule of trade.rule_breaks ?? []) {
-      const label = cleanLabel(rule);
+      const label = normalizeTag(rule);
       if (!label) continue;
       const key = `Rule:${label}`;
       groups.set(key, {
@@ -376,6 +388,19 @@ export function stopDoingInsights(trades: StatsTrade[]): StopDoingInsight[] {
         b.count - a.count ||
         a.name.localeCompare(b.name)
     );
+}
+
+export function processAlerts(trades: StatsTrade[]): ProcessAlert[] {
+  return stopDoingInsights(trades)
+    .filter((item) => item.totalPnl < 0)
+    .map((item) => ({
+      name: item.name,
+      source: item.source,
+      count: item.count,
+      lossCount: item.lossCount,
+      totalPnl: item.totalPnl,
+      avgPnl: item.avgPnl,
+    }));
 }
 
 export function weekTrades(
