@@ -64,6 +64,66 @@ function biasVariant(bias: string) {
   return "secondary" as const;
 }
 
+function InlineMarkdown({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+
+  return (
+    <>
+      {parts.map((part, index) =>
+        part.startsWith("**") && part.endsWith("**") ? (
+          <strong key={`${part}-${index}`} className="font-semibold text-foreground">
+            {part.slice(2, -2)}
+          </strong>
+        ) : (
+          <span key={`${part}-${index}`}>{part}</span>
+        )
+      )}
+    </>
+  );
+}
+
+function MarkdownPlan({ content }: { content: string }) {
+  const blocks = content
+    .split(/\n(?=## )/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {blocks.map((block) => {
+        const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+        const title = lines[0]?.replace(/^##\s*/, "") ?? "Plan";
+        const body = lines.slice(1);
+
+        return (
+          <section key={title} className="rounded-lg border bg-background/60 p-4">
+            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+            <div className="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
+              {body.map((line) => {
+                const isBullet = line.startsWith("- ");
+                const clean = isBullet ? line.slice(2) : line;
+
+                return isBullet ? (
+                  <div key={line} className="flex gap-2">
+                    <span className="mt-2 size-1.5 shrink-0 rounded-full bg-primary" />
+                    <p>
+                      <InlineMarkdown text={clean} />
+                    </p>
+                  </div>
+                ) : (
+                  <p key={line}>
+                    <InlineMarkdown text={clean} />
+                  </p>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
 export default async function OptionFlowPage() {
   const supabase = await createClient();
   const [{ data, error }, { data: latestInput }] = await Promise.all([
@@ -234,9 +294,7 @@ export default async function OptionFlowPage() {
                       {latestReport.aiPlan.manualInput.levels.length} levels
                     </Badge>
                   </div>
-                  <div className="rounded-lg border bg-background/60 p-4 text-sm leading-6 whitespace-pre-wrap text-muted-foreground">
-                    {latestReport.aiPlan.content}
-                  </div>
+                  <MarkdownPlan content={latestReport.aiPlan.content} />
                 </div>
               ) : (
                 <div className="rounded-lg border border-dashed bg-background/60 p-4 text-sm text-muted-foreground">
