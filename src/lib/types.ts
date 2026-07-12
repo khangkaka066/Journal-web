@@ -76,3 +76,17 @@ export interface AiReview {
   content: string;
   created_at: string;
 }
+
+export interface OptionFlowReportRecord {
+  id: string;
+  report_date: string;
+  source: string;
+  symbols: string[];
+  status: "completed" | "partial" | "failed";
+  scheduled_time_zone: string;
+  fetched_at: string;
+  report: unknown;
+  errors: string[];
+  created_at: string;
+  updated_at: string;
+}

@@ -4,6 +4,7 @@ import {
   Bot,
   Camera,
   CheckSquare,
+  DatabaseZap,
   FileText,
   KeyRound,
   ListChecks,
@@ -62,13 +63,27 @@ const sections = [
   },
   {
     id: "dashboard",
-    title: "Dashboard và Weekly Review",
+    title: "Dashboard, Weekly Review và Option Flow",
     icon: <FileText className="size-4 text-primary" />,
     items: [
       "Dashboard hiển thị tổng PnL, winrate, profit factor, expectancy và equity curve.",
       "Dùng filters để xem theo instrument, session, setup, strategy, mistake hoặc rule break.",
       "What to stop doing chỉ ra hành vi đang gây thiệt hại lớn nhất.",
       "Weekly Review gom dữ liệu tuần hiện tại để chọn một focus cho tuần sau.",
+      "Option Flow hiển thị report 09:00 New York với put/call ratio, premium estimate, key strikes và top volume contracts.",
+    ],
+  },
+  {
+    id: "option-flow",
+    title: "Đọc Option Flow Report",
+    icon: <DatabaseZap className="size-4 text-primary" />,
+    items: [
+      "Vào Flow để xem report mới nhất sau 09:00 New York.",
+      "Put/call volume ratio cao thường cho thấy put activity mạnh hơn call activity; thấp thì ngược lại.",
+      "Premium estimate dùng mid price x volume x 100 để ước lượng dòng tiền tương đối.",
+      "Key strikes giúp bạn biết vùng strike nào tập trung volume và open interest.",
+      "Top volume contracts giúp tìm expiry/strike đang được giao dịch nhiều nhất.",
+      "Dùng report này để ghi bias và backtest với kết quả trong ngày, không dùng như tín hiệu vào lệnh một mình.",
     ],
   },
   {
