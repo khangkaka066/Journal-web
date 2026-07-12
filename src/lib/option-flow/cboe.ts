@@ -202,6 +202,14 @@ export async function fetchCboeOptionReport(symbolInput: string): Promise<Symbol
   }
 
   const payload = (await response.json()) as CboePayload;
+  return buildCboeOptionReportFromPayload(symbol, payload);
+}
+
+export function buildCboeOptionReportFromPayload(
+  symbolInput: string,
+  payload: CboePayload
+): SymbolOptionReport {
+  const symbol = symbolInput.trim().toUpperCase();
   const data = payload.data ?? {};
   const contracts = (data.options ?? [])
     .map((row) => normalizeContract(row, symbol))
@@ -307,4 +315,30 @@ export async function fetchCboeOptionReport(symbolInput: string): Promise<Symbol
       "Use this report as market context and backtest input, not as a standalone signal.",
     ],
   };
+}
+
+export function buildCboeOptionReportFromRows(
+  symbolInput: string,
+  rows: Array<Record<string, unknown>>
+): SymbolOptionReport {
+  const symbol = symbolInput.trim().toUpperCase();
+  const options = rows.map((row) => ({
+    ...row,
+    option: row.option ?? row.option_symbol,
+    last_trade_price: row.last_trade_price ?? row.last,
+  }));
+  const first = rows[0] ?? {};
+
+  return buildCboeOptionReportFromPayload(symbol, {
+    timestamp: asString(first.cboe_timestamp ?? first.fetched_at_utc),
+    data: {
+      options,
+      current_price: first.underlying_last,
+      close: first.underlying_last,
+      prev_day_close: first.underlying_prev_day_close,
+      volume: first.underlying_volume,
+      iv30: first.underlying_iv30,
+      as_of: first.underlying_asof,
+    },
+  });
 }

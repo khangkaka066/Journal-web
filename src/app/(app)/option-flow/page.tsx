@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { OptionFlowInputForm, type OptionFlowInputRecord } from "@/components/option-flow/option-flow-input-form";
+import { OptionFlowImportForm } from "@/components/option-flow/option-flow-import-form";
 import type { DailyOptionFlowReport } from "@/lib/option-flow/report";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -108,6 +109,7 @@ export default async function OptionFlowPage() {
       </div>
 
       <OptionFlowInputForm latestInput={optionFlowInput} />
+      <OptionFlowImportForm />
 
       {error && (
         <Card className="border-destructive/30 bg-destructive/5">

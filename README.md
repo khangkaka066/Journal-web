@@ -261,6 +261,7 @@ The report shows:
 - key strikes by volume, open interest, and premium estimate
 - AI trading plan using `docs/option_flow_knowledge.md`, the CBOE snapshot, and configured QQQ levels
 - a form where you can paste QQQ levels and current QQQ price before the next cron run
+- a manual import form for historical CBOE CSV/raw JSON snapshots
 
 This uses delayed CBOE option chain snapshots, not tick-by-tick order flow. Use it as a study and backtesting context layer.
 The AI plan is educational and should be reviewed as conditional if-then scenarios, not financial advice.
