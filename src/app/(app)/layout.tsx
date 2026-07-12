@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BarChart3, CalendarDays, ListChecks, Plus, Settings, TrendingUp } from "lucide-react";
+import { BarChart3, BookOpen, CalendarDays, ListChecks, Plus, Settings, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,10 @@ export default async function AppLayout({
             <Button variant="ghost" size="sm" render={<Link href="/settings" />}>
               <Settings className="size-4" />
               Settings
+            </Button>
+            <Button variant="ghost" size="sm" render={<Link href="/docs" />}>
+              <BookOpen className="size-4" />
+              Docs
             </Button>
           </nav>
           <div className="flex items-center gap-2">
