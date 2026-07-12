@@ -2,6 +2,7 @@ import {
   Activity,
   AlertTriangle,
   BarChart3,
+  Bot,
   CalendarClock,
   CircleDollarSign,
   DatabaseZap,
@@ -195,6 +196,33 @@ export default async function OptionFlowPage() {
                   </div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card/75">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Bot className="size-4 text-primary" />
+                AI Trading Plan
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {latestReport.aiPlan ? (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary">{latestReport.aiPlan.model}</Badge>
+                    <Badge variant="outline">{latestReport.aiPlan.knowledgeSource}</Badge>
+                  </div>
+                  <div className="rounded-lg border bg-background/60 p-4 text-sm leading-6 whitespace-pre-wrap text-muted-foreground">
+                    {latestReport.aiPlan.content}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed bg-background/60 p-4 text-sm text-muted-foreground">
+                  AI plan is not available yet. Add <span className="font-medium text-foreground">OPENROUTER_API_KEY</span> in
+                  Vercel, then let the next cron run generate a plan.
+                </div>
+              )}
             </CardContent>
           </Card>
 

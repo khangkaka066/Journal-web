@@ -14,7 +14,7 @@ Built with **Next.js**, **Supabase**, **OpenRouter**, **Recharts**, and **Tailwi
 - Dashboard with equity curve, daily PnL heatmap, setup winrate, strategy wins, mistake patterns, and rule-break cost
 - Weekly review page for current-week performance and next focus
 - AI coach actions through OpenRouter for weekly review, trade debrief, mistake patterns, screenshot review, and study plans
-- Daily 09:00 New York option flow report using CBOE delayed option chain snapshots
+- Daily 09:00 New York option flow report using CBOE delayed option chain snapshots and an optional AI trading plan
 
 ## Requirements
 
@@ -53,6 +53,7 @@ OPTION_FLOW_SYMBOLS=SPY,QQQ
 
 You can find Supabase values under **Project Settings > API**. Create the OpenRouter key in your OpenRouter dashboard. `OPENROUTER_API_KEY` is optional if you prefer adding the key inside the app Settings page on each browser.
 `SUPABASE_SERVICE_ROLE_KEY` and `OPTION_FLOW_CRON_SECRET` are server-only values used by the option flow cron job.
+The option flow AI plan runs inside the cron job, so it requires `OPENROUTER_API_KEY` in server environment variables.
 
 4. Run the app:
 
@@ -256,8 +257,10 @@ The report shows:
 - top volume contracts
 - unusual volume versus open interest
 - key strikes by volume, open interest, and premium estimate
+- AI trading plan using `docs/option_flow_knowledge.md`, the CBOE snapshot, and configured QQQ levels
 
 This uses delayed CBOE option chain snapshots, not tick-by-tick order flow. Use it as a study and backtesting context layer.
+The AI plan is educational and should be reviewed as conditional if-then scenarios, not financial advice.
 
 ## Recommended Journaling Workflow
 

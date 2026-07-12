@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildOptionFlowAiPlan } from "@/lib/option-flow/ai-plan";
 import { fetchCboeOptionReport } from "@/lib/option-flow/cboe";
 import { buildDailyOptionFlowReport, getNewYorkDateParts } from "@/lib/option-flow/report";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -52,6 +53,20 @@ export async function GET(request: Request) {
     generatedAt: now.toISOString(),
   });
 
+  try {
+    const aiPlan = await buildOptionFlowAiPlan(report);
+    report.aiPlan = aiPlan;
+
+    if (!aiPlan) {
+      report.errors.push("AI trading plan skipped: set OPENROUTER_API_KEY in Vercel to enable it.");
+    }
+  } catch (error) {
+    report.aiPlan = null;
+    report.errors.push(
+      `AI trading plan failed: ${error instanceof Error ? error.message : "unknown error"}`
+    );
+  }
+
   const supabase = createAdminClient();
   const { error } = await supabase.from("option_flow_reports").upsert(
     {
@@ -62,7 +77,7 @@ export async function GET(request: Request) {
       scheduled_time_zone: report.timezone,
       fetched_at: report.generatedAt,
       report,
-      errors,
+      errors: report.errors,
       updated_at: now.toISOString(),
     },
     { onConflict: "report_date,source" }
