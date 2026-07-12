@@ -4,8 +4,6 @@ import {
   Bot,
   Camera,
   CheckSquare,
-  Cloud,
-  Database,
   FileText,
   KeyRound,
   ListChecks,
@@ -55,7 +53,7 @@ const sections = [
     icon: <Camera className="size-4 text-primary" />,
     items: [
       "Trong New trade hoặc Edit trade, upload chart screenshot ở mục Screenshots.",
-      "Ảnh được lưu trong private Supabase Storage bucket.",
+      "Ảnh giúp bạn xem lại đúng bối cảnh thị trường lúc vào lệnh.",
       "Vào trang trade detail để xem gallery và mở ảnh lớn.",
       "Screenshot review của AI cần ảnh chart đã upload và model OpenRouter hỗ trợ vision.",
     ],
@@ -77,33 +75,21 @@ const sections = [
     icon: <Bot className="size-4 text-primary" />,
     items: [
       "Vào Settings > AI settings để nhập OpenRouter API key và model.",
-      "Key được lưu trong trình duyệt bằng localStorage, không lưu vào Supabase.",
+      "Sau khi lưu key, bạn có thể dùng các nút AI trong Weekly hoặc trade detail.",
       "Trong Weekly có AI Weekly Review, Mistake Patterns và Study Plan.",
       "Trong trade detail có AI Trade Debrief và Screenshot Review.",
       "AI chỉ dùng để học tập và review process, không phải tín hiệu giao dịch.",
     ],
   },
   {
-    id: "supabase",
-    title: "Supabase cần làm gì",
-    icon: <Database className="size-4 text-primary" />,
+    id: "settings",
+    title: "Cài đặt cá nhân",
+    icon: <Settings className="size-4 text-primary" />,
     items: [
-      "Chạy migration SQL theo thứ tự trong supabase/migrations.",
-      "Đảm bảo Authentication redirect URL có /auth/callback cho local và Vercel.",
-      "Bucket screenshots là private và chỉ user sở hữu ảnh mới đọc được.",
-      "Nếu mới pull code, nhớ chạy migration 0004_review_presets.sql để Settings preset hoạt động.",
-    ],
-  },
-  {
-    id: "vercel",
-    title: "Deploy Vercel",
-    icon: <Cloud className="size-4 text-primary" />,
-    items: [
-      "Framework preset chọn Next.js.",
-      "Build Command là next build, Install Command là npm install.",
-      "Output Directory để trống, không nhập Next.js default.",
-      "Thêm NEXT_PUBLIC_SUPABASE_URL và NEXT_PUBLIC_SUPABASE_ANON_KEY trong Environment Variables.",
-      "OPENROUTER_API_KEY có thể để trống nếu user nhập key trong Settings.",
+      "Vào Settings để đổi timezone và base currency.",
+      "Review presets dùng để chỉnh danh sách checklist, mistake tags và rule breaks theo phong cách trade của bạn.",
+      "AI settings dùng để lưu OpenRouter key và model bạn muốn dùng.",
+      "Sau khi chỉnh preset, form New trade sẽ dùng lại danh sách mới.",
     ],
   },
 ];
@@ -120,7 +106,7 @@ export default function DocsPage() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Documentation</h1>
             <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Hướng dẫn sử dụng trading journal, từ ghi trade, review lỗi, cấu hình AI cho đến deploy.
+              Hướng dẫn sử dụng trading journal, từ ghi trade, review lỗi, xem thống kê cho đến dùng AI coach.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -145,8 +131,8 @@ export default function DocsPage() {
         </CardHeader>
         <CardContent className="text-sm leading-6 text-muted-foreground">
           Nếu muốn dùng AI, vào <span className="font-medium text-foreground">Settings &gt; AI settings</span>,
-          dán OpenRouter API key, chọn model rồi Save. Nếu bạn đã cấu hình `OPENROUTER_API_KEY`
-          trên Vercel thì user không bắt buộc nhập key trong app.
+          dán OpenRouter API key, chọn model rồi Save. Sau đó quay lại Weekly hoặc trang chi tiết trade
+          để bấm các nút AI coach.
         </CardContent>
       </Card>
 
