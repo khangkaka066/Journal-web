@@ -78,6 +78,7 @@ supabase/migrations/0003_mistake_rules.sql
 supabase/migrations/0004_review_presets.sql
 supabase/migrations/0005_ai_reviews.sql
 supabase/migrations/0006_option_flow_reports.sql
+supabase/migrations/0007_option_flow_inputs.sql
 ```
 
 The migrations create:
@@ -92,6 +93,7 @@ The migrations create:
 - synced review presets for checklist and tag customization
 - saved AI reviews
 - daily option flow reports
+- user-supplied option flow levels and current spot for AI plans
 
 ## Auth Setup
 
@@ -258,6 +260,7 @@ The report shows:
 - unusual volume versus open interest
 - key strikes by volume, open interest, and premium estimate
 - AI trading plan using `docs/option_flow_knowledge.md`, the CBOE snapshot, and configured QQQ levels
+- a form where you can paste QQQ levels and current QQQ price before the next cron run
 
 This uses delayed CBOE option chain snapshots, not tick-by-tick order flow. Use it as a study and backtesting context layer.
 The AI plan is educational and should be reviewed as conditional if-then scenarios, not financial advice.

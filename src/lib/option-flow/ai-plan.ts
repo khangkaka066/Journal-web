@@ -2,44 +2,23 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { askOpenRouter } from "@/lib/ai/openrouter";
 import type { DailyOptionFlowReport } from "./report";
-
-export interface OptionFlowLevel {
-  symbol: string;
-  label: string;
-  value: number;
-}
+import {
+  DEFAULT_QQQ_LEVELS,
+  DEFAULT_QQQ_LEVELS_TEXT,
+  type OptionFlowLevel,
+  type OptionFlowManualInput,
+} from "./levels";
 
 export interface OptionFlowAiPlan {
   generatedAt: string;
   model: string;
   knowledgeSource: string;
+  manualInput: OptionFlowManualInput;
   levels: OptionFlowLevel[];
   content: string;
 }
 
 const KNOWLEDGE_PATH = "docs/option_flow_knowledge.md";
-
-const DEFAULT_QQQ_LEVELS: OptionFlowLevel[] = [
-  { symbol: "QQQ", label: "Call Resistance", value: 800 },
-  { symbol: "QQQ", label: "Put Support", value: 715 },
-  { symbol: "QQQ", label: "HVL", value: 721 },
-  { symbol: "QQQ", label: "1D Min", value: 712.19 },
-  { symbol: "QQQ", label: "1D Max", value: 735.97 },
-  { symbol: "QQQ", label: "Call Resistance 0DTE", value: 725 },
-  { symbol: "QQQ", label: "Put Support 0DTE", value: 715 },
-  { symbol: "QQQ", label: "HVL 0DTE", value: 727 },
-  { symbol: "QQQ", label: "Gamma Wall 0DTE", value: 725 },
-  { symbol: "QQQ", label: "GEX 1", value: 730 },
-  { symbol: "QQQ", label: "GEX 2", value: 735 },
-  { symbol: "QQQ", label: "GEX 3", value: 726 },
-  { symbol: "QQQ", label: "GEX 4", value: 733 },
-  { symbol: "QQQ", label: "GEX 5", value: 729 },
-  { symbol: "QQQ", label: "GEX 6", value: 740 },
-  { symbol: "QQQ", label: "GEX 7", value: 710 },
-  { symbol: "QQQ", label: "GEX 8", value: 711 },
-  { symbol: "QQQ", label: "GEX 9", value: 705 },
-  { symbol: "QQQ", label: "GEX 10", value: 745 },
-];
 
 function compactKnowledge(content: string): string {
   const sections = content
@@ -93,13 +72,22 @@ function slimReport(report: DailyOptionFlowReport) {
   };
 }
 
-export async function buildOptionFlowAiPlan(report: DailyOptionFlowReport): Promise<OptionFlowAiPlan | null> {
+export async function buildOptionFlowAiPlan(
+  report: DailyOptionFlowReport,
+  manualInput?: OptionFlowManualInput | null
+): Promise<OptionFlowAiPlan | null> {
   if (!process.env.OPENROUTER_API_KEY) return null;
 
   const model = process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini";
   const rawKnowledge = await readFile(join(process.cwd(), KNOWLEDGE_PATH), "utf8");
   const knowledge = compactKnowledge(rawKnowledge);
-  const levels = DEFAULT_QQQ_LEVELS;
+  const input = manualInput ?? {
+    symbol: "QQQ",
+    spotPrice: null,
+    rawText: DEFAULT_QQQ_LEVELS_TEXT,
+    levels: DEFAULT_QQQ_LEVELS,
+  };
+  const levels = input.levels.length > 0 ? input.levels : DEFAULT_QQQ_LEVELS;
 
   const content = await askOpenRouter({
     model,
@@ -126,7 +114,7 @@ Output in concise Vietnamese Markdown with these sections:
 
 Rules:
 - Every trade idea must be conditional if-then.
-- Use the supplied levels: call resistance, put support, HVL, 1D min/max, 0DTE walls, gamma wall, and GEX ladder.
+- Use the supplied current price and levels: call resistance, put support, HVL, 1D min/max, 0DTE walls, gamma wall, and GEX ladder.
 - Compare the levels with the CBOE snapshot values.
 - Explain the mechanism using OI, put/call ratio, premium, gamma wall, pinning, 0DTE, vanna/charm only when supported by data.
 - Mention that this is educational planning, not financial advice.
@@ -136,6 +124,9 @@ ${knowledge}
 
 QQQ LEVELS:
 ${JSON.stringify(levels, null, 2)}
+
+USER INPUT:
+${JSON.stringify(input, null, 2)}
 
 OPTION FLOW SNAPSHOT:
 ${JSON.stringify(slimReport(report), null, 2)}`,
@@ -147,6 +138,7 @@ ${JSON.stringify(slimReport(report), null, 2)}`,
     generatedAt: new Date().toISOString(),
     model,
     knowledgeSource: KNOWLEDGE_PATH,
+    manualInput: input,
     levels,
     content,
   };

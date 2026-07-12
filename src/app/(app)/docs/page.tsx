@@ -83,6 +83,7 @@ const sections = [
       "Premium estimate dùng mid price x volume x 100 để ước lượng dòng tiền tương đối.",
       "Key strikes giúp bạn biết vùng strike nào tập trung volume và open interest.",
       "Top volume contracts giúp tìm expiry/strike đang được giao dịch nhiều nhất.",
+      "Trước khi cron chạy, dán levels và nhập current price ở form QQQ levels for AI plan.",
       "AI Trading Plan dùng knowledge base option flow, snapshot CBOE và các level QQQ để viết kịch bản if-then.",
       "Dùng report này để ghi bias và backtest với kết quả trong ngày, không dùng như tín hiệu vào lệnh một mình.",
     ],

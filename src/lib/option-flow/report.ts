@@ -1,5 +1,6 @@
 import type { SymbolOptionReport } from "./cboe";
 import type { OptionFlowAiPlan } from "./ai-plan";
+import type { OptionFlowManualInput } from "./levels";
 
 export interface DailyOptionFlowReport {
   reportDate: string;
@@ -18,6 +19,7 @@ export interface DailyOptionFlowReport {
     netPremiumBias: "bullish" | "bearish" | "mixed";
   };
   narrative: string[];
+  manualInput?: OptionFlowManualInput | null;
   aiPlan?: OptionFlowAiPlan | null;
   errors: string[];
 }

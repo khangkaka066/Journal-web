@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildOptionFlowAiPlan } from "@/lib/option-flow/ai-plan";
+import type { OptionFlowLevel, OptionFlowManualInput } from "@/lib/option-flow/levels";
 import { fetchCboeOptionReport } from "@/lib/option-flow/cboe";
 import { buildDailyOptionFlowReport, getNewYorkDateParts } from "@/lib/option-flow/report";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -28,6 +29,27 @@ function isAuthorized(request: Request): boolean {
   return secrets.some((secret) => auth === `Bearer ${secret}` || headerSecret === secret);
 }
 
+interface OptionFlowInputRow {
+  symbol: string;
+  spot_price: number | string | null;
+  raw_text: string;
+  levels: OptionFlowLevel[];
+  created_at: string;
+}
+
+function normalizeManualInput(row?: OptionFlowInputRow | null): OptionFlowManualInput | null {
+  if (!row) return null;
+  const spotPrice = row.spot_price == null ? null : Number(row.spot_price);
+
+  return {
+    symbol: row.symbol,
+    spotPrice: Number.isFinite(spotPrice) ? spotPrice : null,
+    rawText: row.raw_text,
+    levels: Array.isArray(row.levels) ? row.levels : [],
+    createdAt: row.created_at,
+  };
+}
+
 export async function GET(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -53,8 +75,18 @@ export async function GET(request: Request) {
     generatedAt: now.toISOString(),
   });
 
+  const supabase = createAdminClient();
+  const { data: latestInput } = await supabase
+    .from("option_flow_inputs")
+    .select("symbol, spot_price, raw_text, levels, created_at")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const manualInput = normalizeManualInput(latestInput as OptionFlowInputRow | null);
+  report.manualInput = manualInput;
+
   try {
-    const aiPlan = await buildOptionFlowAiPlan(report);
+    const aiPlan = await buildOptionFlowAiPlan(report, manualInput);
     report.aiPlan = aiPlan;
 
     if (!aiPlan) {
@@ -67,7 +99,6 @@ export async function GET(request: Request) {
     );
   }
 
-  const supabase = createAdminClient();
   const { error } = await supabase.from("option_flow_reports").upsert(
     {
       report_date: report.reportDate,

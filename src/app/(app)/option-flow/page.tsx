@@ -11,6 +11,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { OptionFlowInputForm, type OptionFlowInputRecord } from "@/components/option-flow/option-flow-input-form";
 import type { DailyOptionFlowReport } from "@/lib/option-flow/report";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,15 +65,24 @@ function biasVariant(bias: string) {
 
 export default async function OptionFlowPage() {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("option_flow_reports")
-    .select("*")
-    .order("report_date", { ascending: false })
-    .limit(8);
+  const [{ data, error }, { data: latestInput }] = await Promise.all([
+    supabase
+      .from("option_flow_reports")
+      .select("*")
+      .order("report_date", { ascending: false })
+      .limit(8),
+    supabase
+      .from("option_flow_inputs")
+      .select("id, symbol, spot_price, raw_text, levels, created_at")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
 
   const reports = (data ?? []) as OptionFlowRecord[];
   const latest = reports[0];
   const latestReport = latest?.report;
+  const optionFlowInput = latestInput as OptionFlowInputRecord | null;
 
   return (
     <div className="space-y-6">
@@ -96,6 +106,8 @@ export default async function OptionFlowPage() {
           )}
         </div>
       </div>
+
+      <OptionFlowInputForm latestInput={optionFlowInput} />
 
       {error && (
         <Card className="border-destructive/30 bg-destructive/5">
@@ -212,6 +224,13 @@ export default async function OptionFlowPage() {
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="secondary">{latestReport.aiPlan.model}</Badge>
                     <Badge variant="outline">{latestReport.aiPlan.knowledgeSource}</Badge>
+                    <Badge variant="outline">
+                      {latestReport.aiPlan.manualInput.symbol} spot{" "}
+                      {number(latestReport.aiPlan.manualInput.spotPrice)}
+                    </Badge>
+                    <Badge variant="outline">
+                      {latestReport.aiPlan.manualInput.levels.length} levels
+                    </Badge>
                   </div>
                   <div className="rounded-lg border bg-background/60 p-4 text-sm leading-6 whitespace-pre-wrap text-muted-foreground">
                     {latestReport.aiPlan.content}
