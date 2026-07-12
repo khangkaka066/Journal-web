@@ -32,19 +32,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const url = new URL(request.url);
-  const force = url.searchParams.get("force") === "1";
   const now = new Date();
   const ny = getNewYorkDateParts(now);
-
-  if (!force && ny.hour !== 9) {
-    return NextResponse.json({
-      skipped: true,
-      reason: "Cron only generates reports at 09:00 America/New_York.",
-      newYorkTime: `${String(ny.hour).padStart(2, "0")}:${String(ny.minute).padStart(2, "0")}`,
-      reportDate: ny.date,
-    });
-  }
 
   const symbols = getSymbols();
   const settled = await Promise.allSettled(symbols.map((symbol) => fetchCboeOptionReport(symbol)));
