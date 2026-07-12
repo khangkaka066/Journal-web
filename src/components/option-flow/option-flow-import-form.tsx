@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const MAX_RECOMMENDED_UPLOAD_BYTES = 4 * 1024 * 1024;
+
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -25,6 +27,11 @@ export function OptionFlowImportForm() {
       return;
     }
 
+    if (file.size > MAX_RECOMMENDED_UPLOAD_BYTES) {
+      toast.error("This file is too large for Vercel upload. Use the CSV snapshot instead of raw JSON.");
+      return;
+    }
+
     const formData = new FormData();
     formData.set("file", file);
     formData.set("symbol", symbol);
@@ -35,7 +42,12 @@ export function OptionFlowImportForm() {
       method: "POST",
       body: formData,
     });
-    const payload = await response.json().catch(() => ({}));
+    const payload = await response.json().catch(() => ({
+      error:
+        response.status === 413
+          ? "File upload is too large for Vercel. Use the CSV snapshot instead of raw JSON."
+          : "Import request failed before the server could read the file.",
+    }));
     setImporting(false);
 
     if (!response.ok) {
@@ -82,8 +94,19 @@ export function OptionFlowImportForm() {
             id="snapshot-file"
             type="file"
             accept=".csv,.json"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            onChange={(event) => {
+              const selected = event.target.files?.[0] ?? null;
+              setFile(selected);
+              if (selected && selected.size > MAX_RECOMMENDED_UPLOAD_BYTES) {
+                toast.warning("Raw JSON snapshots can be too large on Vercel. Use the CSV file for this import.");
+              }
+            }}
           />
+          {file && (
+            <div className="text-xs text-muted-foreground">
+              {(file.size / 1024 / 1024).toFixed(2)} MB selected
+            </div>
+          )}
         </div>
         <Button onClick={importSnapshot} disabled={importing}>
           <Upload className="size-4" />

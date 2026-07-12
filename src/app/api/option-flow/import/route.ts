@@ -49,41 +49,41 @@ function parseSnapshot(text: string, fileName: string, symbol: string) {
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const formData = await request.formData();
-  const file = formData.get("file");
-  const reportDate = String(formData.get("reportDate") ?? "").trim();
-  const symbolValue = String(formData.get("symbol") ?? "QQQ").trim().toUpperCase();
-
-  if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Snapshot file is required" }, { status: 400 });
-  }
-
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) {
-    return NextResponse.json({ error: "reportDate must use YYYY-MM-DD" }, { status: 400 });
-  }
-
-  const text = await file.text();
-  const symbol = inferSymbol(file.name, symbolValue);
-  const admin = createAdminClient();
-  const { data: latestInput } = await admin
-    .from("option_flow_inputs")
-    .select("symbol, spot_price, raw_text, levels, created_at")
-    .eq("symbol", symbol)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const manualInput = normalizeManualInput(latestInput as OptionFlowInputRow | null);
-
   try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const formData = await request.formData();
+    const file = formData.get("file");
+    const reportDate = String(formData.get("reportDate") ?? "").trim();
+    const symbolValue = String(formData.get("symbol") ?? "QQQ").trim().toUpperCase();
+
+    if (!(file instanceof File)) {
+      return NextResponse.json({ error: "Snapshot file is required" }, { status: 400 });
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(reportDate)) {
+      return NextResponse.json({ error: "reportDate must use YYYY-MM-DD" }, { status: 400 });
+    }
+
+    const text = await file.text();
+    const symbol = inferSymbol(file.name, symbolValue);
+    const admin = createAdminClient();
+    const { data: latestInput } = await admin
+      .from("option_flow_inputs")
+      .select("symbol, spot_price, raw_text, levels, created_at")
+      .eq("symbol", symbol)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const manualInput = normalizeManualInput(latestInput as OptionFlowInputRow | null);
+
     const summary = parseSnapshot(text, file.name.toLowerCase(), symbol);
     const report = buildDailyOptionFlowReport({
       reportDate,
