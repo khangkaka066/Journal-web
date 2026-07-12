@@ -15,6 +15,8 @@ const MODES = new Set<AiCoachMode>([
 interface CoachRequest {
   mode?: AiCoachMode;
   tradeId?: string;
+  openRouterApiKey?: string;
+  openRouterModel?: string;
 }
 
 export async function POST(request: Request) {
@@ -108,6 +110,8 @@ export async function POST(request: Request) {
         { role: "system", content: prompt.system },
         userMessage,
       ],
+      apiKey: body.openRouterApiKey?.trim(),
+      model: body.openRouterModel?.trim(),
     });
 
     return NextResponse.json({ output });

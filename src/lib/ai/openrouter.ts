@@ -27,25 +27,29 @@ interface OpenRouterResponse {
 export async function askOpenRouter({
   messages,
   maxTokens = 1200,
+  apiKey,
+  model,
 }: {
   messages: OpenRouterMessage[];
   maxTokens?: number;
+  apiKey?: string;
+  model?: string;
 }) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    throw new Error("Missing OPENROUTER_API_KEY. Add it in Vercel and .env.local.");
+  const key = apiKey || process.env.OPENROUTER_API_KEY;
+  if (!key) {
+    throw new Error("Add an OpenRouter API key in Settings or set OPENROUTER_API_KEY in Vercel.");
   }
 
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
       "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
       "X-Title": "Trading Journal AI Coach",
     },
     body: JSON.stringify({
-      model: process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini",
+      model: model || process.env.OPENROUTER_MODEL || "openai/gpt-4o-mini",
       messages,
       temperature: 0.3,
       max_completion_tokens: maxTokens,

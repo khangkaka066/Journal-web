@@ -20,7 +20,7 @@ Built with **Next.js**, **Supabase**, **OpenRouter**, **Recharts**, and **Tailwi
 - Node.js 20+
 - npm
 - A Supabase project
-- An OpenRouter API key for AI coach features
+- An OpenRouter API key for AI coach features. Users can add their own key in **Settings > AI settings**.
 - A Vercel account for deployment
 
 ## Local Setup
@@ -47,7 +47,7 @@ OPENROUTER_MODEL=openai/gpt-4o-mini
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
-You can find Supabase values under **Project Settings > API**. Create the OpenRouter key in your OpenRouter dashboard.
+You can find Supabase values under **Project Settings > API**. Create the OpenRouter key in your OpenRouter dashboard. `OPENROUTER_API_KEY` is optional if you prefer adding the key inside the app Settings page on each browser.
 
 4. Run the app:
 
@@ -124,6 +124,8 @@ OPENROUTER_API_KEY=your-openrouter-api-key
 OPENROUTER_MODEL=openai/gpt-4o-mini
 NEXT_PUBLIC_SITE_URL=https://your-vercel-domain.vercel.app
 ```
+
+`OPENROUTER_API_KEY` can be omitted from Vercel if users add their own key inside **Settings > AI settings**. Browser-saved keys are stored locally and sent only when an AI coach action runs.
 
 5. Deploy.
 

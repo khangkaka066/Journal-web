@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { Bot, Brain, Camera, GraduationCap, Loader2, MessageSquareText, Sparkles } from "lucide-react";
 import type { AiCoachMode } from "@/lib/ai/prompts";
+import { AI_SETTINGS_KEYS } from "@/components/ai/ai-settings-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface AiAction {
@@ -42,7 +43,12 @@ export function AiCoachPanel({
     const response = await fetch("/api/ai/coach", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: action.mode, tradeId: action.tradeId }),
+      body: JSON.stringify({
+        mode: action.mode,
+        tradeId: action.tradeId,
+        openRouterApiKey: localStorage.getItem(AI_SETTINGS_KEYS.apiKey) ?? "",
+        openRouterModel: localStorage.getItem(AI_SETTINGS_KEYS.model) ?? "",
+      }),
     });
     const payload = (await response.json().catch(() => ({}))) as {
       output?: string;

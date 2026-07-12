@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { SettingsForm } from "@/components/settings-form";
 import { ReviewPresetsForm } from "@/components/review-presets-form";
+import { AiSettingsForm } from "@/components/ai/ai-settings-form";
 import { SlidersHorizontal } from "lucide-react";
 
 export default async function SettingsPage() {
@@ -28,6 +29,7 @@ export default async function SettingsPage() {
       <SettingsForm
         profile={profile ?? { id: user!.id, timezone: "UTC", base_currency: "USD" }}
       />
+      <AiSettingsForm />
       <ReviewPresetsForm userId={user!.id} preset={reviewPreset} />
     </div>
   );
