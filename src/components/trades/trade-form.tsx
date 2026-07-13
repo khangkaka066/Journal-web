@@ -456,7 +456,9 @@ export function TradeForm({
           <Label>Instrument *</Label>
           <Select value={instrumentId} onValueChange={(v) => v && setInstrumentId(v)}>
             <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select" />
+              <SelectValue placeholder="Select">
+                {instrument?.symbol}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {instruments.map((i) => (
