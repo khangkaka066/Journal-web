@@ -99,6 +99,12 @@ The migrations create:
 
 In Supabase, go to **Authentication > URL Configuration**.
 
+Set **Site URL** to your production domain:
+
+```text
+https://your-vercel-domain.vercel.app
+```
+
 Add local redirect URL:
 
 ```text
@@ -110,6 +116,8 @@ After deploying to Vercel, add your production callback URL:
 ```text
 https://your-vercel-domain.vercel.app/auth/callback
 ```
+
+If your confirmation email template uses `{{ .SiteURL }}`, update it to use `{{ .RedirectTo }}` so the `emailRedirectTo` value from the app is honored.
 
 If you want Google login, enable it in **Authentication > Providers > Google** and configure your Google Client ID and Client Secret.
 

@@ -26,6 +26,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  function authCallbackUrl() {
+    return `${window.location.origin}/auth/callback?next=/dashboard`;
+  }
+
   async function signIn() {
     if (!supabaseConfigured) {
       return toast.error("Configure Supabase env vars first.");
@@ -43,9 +47,20 @@ export default function LoginPage() {
       return toast.error("Configure Supabase env vars first.");
     }
     setLoading(true);
-    const { error } = await createClient().auth.signUp({ email, password });
+    const { data, error } = await createClient().auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: authCallbackUrl(),
+      },
+    });
     setLoading(false);
     if (error) return toast.error(error.message);
+    if (data.session) {
+      router.push("/dashboard");
+      router.refresh();
+      return;
+    }
     toast.success("Check your email to confirm your account.");
   }
 
@@ -55,7 +70,7 @@ export default function LoginPage() {
     }
     const { error } = await createClient().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: { redirectTo: authCallbackUrl() },
     });
     if (error) toast.error(error.message);
   }
